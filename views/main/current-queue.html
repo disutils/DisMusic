@@ -1,0 +1,778 @@
+{% extends "templates/base.html" %}
+{% block content %}
+
+<!-- Main content -->
+<div class="main-content">
+    <div class="page-content">
+        <div class="container-fluid">
+
+            <!-- Page Title -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+                        <h4 class="mb-sm-0">Music Player</h4>
+                        <div class="page-title-right">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="javascript: void(0);">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Current Queue</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="mdi mdi-magnify"></i>
+                                        </span>
+                                        <input type="text" id="searchInput" class="form-control" placeholder="Enter Spotify URL or search for music...">
+                                        <button class="btn btn-primary" type="button" id="searchButton">
+                                            <i class="mdi mdi-plus me-1"></i>Add to Queue
+                                        </button>
+                                    </div>
+                                    <div id="errorMessage" class="alert alert-danger mt-2" style="display: none;" role="alert">
+                                        <i class="mdi mdi-alert-circle me-2"></i>
+                                        <span class="error-text"></span>
+                                        <button type="button" class="btn-close ms-auto" aria-label="Close"></button>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-secondary" id="shuffleButton" title="Shuffle Queue">
+                                            <i class="mdi mdi-shuffle"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary" id="clearQueueButton" title="Clear Queue">
+                                            <i class="mdi mdi-playlist-remove"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Now Playing & Queue -->
+            <div class="row">
+                <!-- Now Playing Card -->
+                <div class="col-xl-4 col-lg-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4">
+                                <i class="mdi mdi-music-circle me-2"></i>Now Playing
+                            </h5>
+
+                            <div class="text-center">
+                                <!-- Album Art -->
+                                <div class="position-relative d-inline-block mb-4">
+                                    <img id="albumCover" src="assets/images/default-album.png" alt="Album Cover"
+                                         class="img-fluid rounded shadow-lg" style="max-width: 250px; max-height: 250px;">
+                                    <div class="position-absolute top-50 start-50 translate-middle opacity-0 hover-overlay">
+                                        <button class="btn btn-primary btn-lg rounded-circle" id="mainPlayButton">
+                                            <i class="mdi mdi-play fs-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Track Info -->
+                                <h4 id="currentTrack" class="mb-2">No track playing</h4>
+                                <p id="currentArtist" class="text-muted mb-4">Unknown Artist</p>
+
+                                <!-- Progress Bar -->
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <small id="currentTime" class="text-muted">0:00</small>
+                                        <small id="totalTime" class="text-muted">0:00</small>
+                                    </div>
+                                    <div class="progress" style="height: 6px; cursor: pointer;" id="progressContainer">
+                                        <div id="songProgress" class="progress-bar bg-primary" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Control Buttons -->
+                                <div class="d-flex justify-content-center align-items-center gap-3">
+                                    <button class="btn btn-outline-secondary btn-sm" id="previousButton" title="Previous">
+                                        <i class="mdi mdi-skip-previous"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-lg" id="playPauseButton" title="Play/Pause">
+                                        <i class="mdi mdi-play"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" id="nextButton" title="Next">
+                                        <i class="mdi mdi-skip-next"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Additional Controls -->
+                                <div class="d-flex justify-content-center align-items-center gap-2 mt-3">
+                                    <button class="btn btn-outline-secondary btn-sm" id="loopButton" title="Loop">
+                                        <i class="mdi mdi-repeat"></i>
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" id="favoriteButton" title="Add to Favorites">
+                                        <i class="mdi mdi-heart-outline"></i>
+                                    </button>
+                                    <div class="d-flex align-items-center ms-3">
+                                        <i class="mdi mdi-volume-high me-2 text-muted"></i>
+                                        <input type="range" class="form-range" id="volumeControl" min="0" max="100" value="100" style="width: 80px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Queue Card -->
+                <div class="col-xl-8 col-lg-7">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h5 class="card-title mb-0">
+                                    <i class="mdi mdi-playlist-music me-2"></i>Queue
+                                    <span class="badge bg-primary ms-2" id="queueCount">0</span>
+                                </h5>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        <i class="mdi mdi-dots-horizontal"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" id="savePlaylistButton"><i class="mdi mdi-content-save me-2"></i>Save as Playlist</a></li>
+                                        <li><a class="dropdown-item" href="#" id="exportQueueButton"><i class="mdi mdi-export me-2"></i>Export Queue</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" id="clearAllButton"><i class="mdi mdi-delete me-2"></i>Clear All</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Queue Table -->
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>Track</th>
+                                            <th style="width: 200px;">Artist</th>
+                                            <th style="width: 100px;">Duration</th>
+                                            <th style="width: 80px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="queueTableBody">
+                                        <!-- Queue items will be inserted here -->
+                                    </tbody>
+                                </table>
+
+                                <!-- Empty State -->
+                                <div id="emptyQueueState" class="text-center py-5">
+                                    <i class="mdi mdi-playlist-music-outline display-4 text-muted mb-3"></i>
+                                    <h5 class="text-muted">Your queue is empty</h5>
+                                    <p class="text-muted mb-4">Add some tracks to get the party started!</p>
+                                    <button class="btn btn-primary" onclick="document.getElementById('searchInput').focus()">
+                                        <i class="mdi mdi-plus me-1"></i>Add Music
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Hidden YouTube Player -->
+<div id="youtube-player" style="position: absolute; left: -9999px; top: -9999px;"></div>
+
+<!-- Fixed Bottom Mini Player (shows when music is playing) -->
+<div id="miniPlayer" class="fixed-bottom bg-dark border-top border-secondary p-3" style="display: none; z-index: 1050;">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <div class="d-flex align-items-center">
+                    <img id="miniAlbumCover" src="assets/images/default-album.png" alt="Album Cover"
+                         class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                    <div class="flex-grow-1 text-truncate">
+                        <h6 id="miniTrackTitle" class="mb-0 text-white text-truncate">No track playing</h6>
+                        <small id="miniArtist" class="text-muted text-truncate">Unknown Artist</small>
+                    </div>
+                    <button class="btn btn-outline-light btn-sm ms-2" id="miniFavoriteButton">
+                        <i class="mdi mdi-heart-outline"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4 text-center">
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                    <button class="btn btn-outline-light btn-sm" id="miniShuffleButton">
+                        <i class="mdi mdi-shuffle"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" id="miniPreviousButton">
+                        <i class="mdi mdi-skip-previous"></i>
+                    </button>
+                    <button class="btn btn-light" id="miniPlayPauseButton">
+                        <i class="mdi mdi-play text-dark"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" id="miniNextButton">
+                        <i class="mdi mdi-skip-next"></i>
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" id="miniLoopButton">
+                        <i class="mdi mdi-repeat"></i>
+                    </button>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted" id="miniCurrentTime">0:00</small>
+                    <div class="progress flex-grow-1" style="height: 4px;">
+                        <div id="miniSongProgress" class="progress-bar bg-primary" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted" id="miniTotalTime">0:00</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                    <i class="mdi mdi-volume-high text-muted"></i>
+                    <input type="range" class="form-range" id="miniVolumeControl" min="0" max="100" value="100" style="width: 100px;">
+                    <button class="btn btn-outline-light btn-sm" id="closeMiniPlayer">
+                        <i class="mdi mdi-close"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let socket = null;
+        let player = null;
+        let isPlaying = false;
+        let isLooping = false;
+        let isShuffled = false;
+        let isSeeking = false;
+        let currentVideoData = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 10;
+        const reconnectDelay = 2000;
+
+        // Progress bar update interval
+        setInterval(updateProgress, 1000);
+
+        function connectSocket() {
+            if (socket) {
+                socket.close();
+            }
+
+            socket = io('http://localhost:3001', {
+                transports: ['websocket'],
+                reconnection: true,
+                reconnectionAttempts: maxReconnectAttempts,
+                reconnectionDelay: reconnectDelay,
+                reconnectionDelayMax: 10000,
+                timeout: 10000
+            });
+
+            // Socket event handlers
+            socket.on('connect', () => {
+                console.log('Connected to server:', socket.id);
+                hideError();
+                reconnectAttempts = 0;
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                showError('Connection error. Attempting to reconnect...');
+                reconnectAttempts++;
+
+                if (reconnectAttempts >= maxReconnectAttempts) {
+                    showError('Could not connect to server. Please refresh the page.');
+                }
+            });
+
+            socket.on('disconnect', (reason) => {
+                console.log('Disconnected:', reason);
+                if (reason === 'io server disconnect') {
+                    setTimeout(connectSocket, reconnectDelay);
+                }
+            });
+
+            socket.on('queueUpdate', (data) => {
+                console.log('Queue updated:', data);
+                updateQueueDisplay(data.queue);
+            });
+
+            socket.on('playYouTube', (data) => {
+                console.log('Received YouTube URL:', data.url);
+                if (!data.url) {
+                    showError('No valid YouTube URL received');
+                    return;
+                }
+                try {
+                    const videoId = extractVideoId(data.url);
+                    if (videoId && player) {
+                        player.loadVideoById(videoId);
+                        isPlaying = true;
+                        updatePlayPauseButtons();
+                        showMiniPlayer();
+                    }
+                } catch (error) {
+                    console.error('Error loading video:', error);
+                    showError('Error loading video');
+                }
+            });
+
+            socket.on('queueEnded', () => {
+                resetPlayerState();
+            });
+
+            return socket;
+        }
+
+        // Initialize YouTube Player
+        window.onYouTubeIframeAPIReady = function() {
+            player = new YT.Player('youtube-player', {
+                height: '360',
+                width: '640',
+                videoId: '',
+                playerVars: {
+                    autoplay: 1,
+                    controls: 0,
+                    modestbranding: 1,
+                    rel: 0
+                },
+                events: {
+                    onStateChange: onPlayerStateChange,
+                    onError: (event) => {
+                        console.error('YouTube player error:', event.data);
+                        showError('Error playing video');
+                    }
+                }
+            });
+        };
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.ENDED) {
+                if (isLooping) {
+                    player.playVideo();
+                } else if (socket && socket.connected) {
+                    socket.emit('next');
+                }
+            } else if (event.data === YT.PlayerState.PLAYING) {
+                isPlaying = true;
+                updatePlayPauseButtons();
+                hideError();
+                showMiniPlayer();
+
+                if (player) {
+                    const videoData = player.getVideoData();
+                    currentVideoData = {
+                        title: videoData.title || 'Unknown Track',
+                        artist: extractArtistFromTitle(videoData.title) || 'Unknown Artist',
+                        albumCover: `https://img.youtube.com/vi/${videoData.video_id}/maxresdefault.jpg`
+                    };
+                    updateTrackDisplay();
+                }
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                isPlaying = false;
+                updatePlayPauseButtons();
+            }
+        }
+
+        function extractVideoId(url) {
+            try {
+                const urlObj = new URL(url);
+                return urlObj.searchParams.get('v');
+            } catch (error) {
+                console.error('Error extracting video ID:', error);
+                return null;
+            }
+        }
+
+        function extractArtistFromTitle(title) {
+            if (!title) return 'Unknown Artist';
+            const separators = [' - ', ' – ', ' | ', ' by '];
+            for (const sep of separators) {
+                if (title.includes(sep)) {
+                    return title.split(sep)[0].trim();
+                }
+            }
+            return 'Unknown Artist';
+        }
+
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            const errorText = errorElement.querySelector('.error-text');
+            errorText.textContent = message;
+            errorElement.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function resetPlayerState() {
+            document.getElementById('currentTrack').textContent = 'No track playing';
+            document.getElementById('currentArtist').textContent = 'Unknown Artist';
+            document.getElementById('miniTrackTitle').textContent = 'No track playing';
+            document.getElementById('miniArtist').textContent = 'Unknown Artist';
+
+            const defaultImage = 'assets/images/default-album.png';
+            document.getElementById('albumCover').src = defaultImage;
+            document.getElementById('miniAlbumCover').src = defaultImage;
+
+            if (player) {
+                player.stopVideo();
+            }
+            isPlaying = false;
+            updatePlayPauseButtons();
+            hideMiniPlayer();
+        }
+
+        function updatePlayPauseButtons() {
+            const buttons = [
+                { element: document.getElementById('playPauseButton'), size: 'normal' },
+                { element: document.getElementById('mainPlayButton'), size: 'normal' },
+                { element: document.getElementById('miniPlayPauseButton'), size: 'mini' }
+            ];
+
+            const icon = isPlaying ? 'mdi-pause' : 'mdi-play';
+            buttons.forEach(({ element, size }) => {
+                if (element) {
+                    const iconClass = size === 'mini' ? `${icon} text-dark` : icon;
+                    element.innerHTML = `<i class="mdi ${iconClass}"></i>`;
+                }
+            });
+        }
+
+        function updateTrackDisplay() {
+            if (currentVideoData) {
+                // Main display
+                document.getElementById('currentTrack').textContent = currentVideoData.title;
+                document.getElementById('currentArtist').textContent = currentVideoData.artist;
+                document.getElementById('albumCover').src = currentVideoData.albumCover;
+
+                // Mini player
+                document.getElementById('miniTrackTitle').textContent = currentVideoData.title;
+                document.getElementById('miniArtist').textContent = currentVideoData.artist;
+                document.getElementById('miniAlbumCover').src = currentVideoData.albumCover;
+            }
+        }
+
+        function updateProgress() {
+            if (player && player.getCurrentTime && !isSeeking) {
+                const currentTime = player.getCurrentTime();
+                const duration = player.getDuration();
+
+                if (duration > 0) {
+                    const progress = (currentTime / duration) * 100;
+                    document.getElementById('songProgress').style.width = `${progress}%`;
+                    document.getElementById('miniSongProgress').style.width = `${progress}%`;
+
+                    const formattedCurrent = formatTime(currentTime);
+                    const formattedTotal = formatTime(duration);
+
+                    document.getElementById('currentTime').textContent = formattedCurrent;
+                    document.getElementById('totalTime').textContent = formattedTotal;
+                    document.getElementById('miniCurrentTime').textContent = formattedCurrent;
+                    document.getElementById('miniTotalTime').textContent = formattedTotal;
+                }
+            }
+        }
+
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00';
+            const minutes = Math.floor(seconds / 60);
+            seconds = Math.floor(seconds % 60);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function showMiniPlayer() {
+            document.getElementById('miniPlayer').style.display = 'block';
+            document.body.style.paddingBottom = '120px';
+        }
+
+        function hideMiniPlayer() {
+            document.getElementById('miniPlayer').style.display = 'none';
+            document.body.style.paddingBottom = '0';
+        }
+
+        function updateQueueDisplay(queue) {
+            const tableBody = document.getElementById('queueTableBody');
+            const emptyState = document.getElementById('emptyQueueState');
+            const queueCount = document.getElementById('queueCount');
+
+            if (!Array.isArray(queue) || queue.length === 0) {
+                tableBody.innerHTML = '';
+                emptyState.style.display = 'block';
+                queueCount.textContent = '0';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            queueCount.textContent = queue.length;
+
+            tableBody.innerHTML = '';
+            queue.forEach((track, index) => {
+                const row = document.createElement('tr');
+                row.className = index === 0 && isPlaying ? 'table-primary' : '';
+                row.innerHTML = `
+                    <td>
+                        ${index === 0 && isPlaying ?
+                            '<i class="mdi mdi-volume-high text-primary"></i>' :
+                            index + 1
+                        }
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="${track.albumCover || 'assets/images/default-album.png'}"
+                                 alt="Album Cover" class="rounded me-3"
+                                 style="width: 40px; height: 40px; object-fit: cover;">
+                            <div>
+                                <h6 class="mb-0">${track.title || 'Unknown Track'}</h6>
+                                <small class="text-muted">${track.artist || 'Unknown Artist'}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-muted">${track.artist || 'Unknown Artist'}</td>
+                    <td class="text-muted">3:21</td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="mdi mdi-dots-horizontal"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="mdi mdi-play me-2"></i>Play Now</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="mdi mdi-heart-outline me-2"></i>Add to Favorites</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#"><i class="mdi mdi-delete me-2"></i>Remove</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Event Listeners
+        document.getElementById('searchButton').addEventListener('click', handleSearch);
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearch();
+            }
+        });
+
+        function handleSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            if (!socket || !socket.connected) {
+                showError('Not connected to server. Trying to reconnect...');
+                connectSocket();
+                return;
+            }
+
+            socket.emit('play', { query: query });
+            document.getElementById('searchInput').value = '';
+        }
+
+        // Control button event listeners
+        const playButtons = ['playPauseButton', 'mainPlayButton', 'miniPlayPauseButton'];
+        playButtons.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', togglePlayPause);
+            }
+        });
+
+        function togglePlayPause() {
+            if (player) {
+                if (isPlaying) {
+                    player.pauseVideo();
+                } else {
+                    player.playVideo();
+                }
+            }
+        }
+
+        // Navigation controls
+        const nextButtons = ['nextButton', 'miniNextButton'];
+        const prevButtons = ['previousButton', 'miniPreviousButton'];
+
+        nextButtons.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', () => {
+                    if (socket && socket.connected) {
+                        socket.emit('next');
+                    }
+                });
+            }
+        });
+
+        prevButtons.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', () => {
+                    if (socket && socket.connected) {
+                        socket.emit('previous');
+                    }
+                });
+            }
+        });
+
+        // Loop and shuffle controls
+        const loopButtons = ['loopButton', 'miniLoopButton'];
+        const shuffleButtons = ['shuffleButton', 'miniShuffleButton'];
+
+        loopButtons.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', () => {
+                    isLooping = !isLooping;
+                    loopButtons.forEach(btnId => {
+                        const btn = document.getElementById(btnId);
+                        if (btn) {
+                            btn.classList.toggle('active', isLooping);
+                            if (isLooping) {
+                                btn.classList.remove('btn-outline-secondary', 'btn-outline-light');
+                                btn.classList.add('btn-primary');
+                            } else {
+                                btn.classList.remove('btn-primary');
+                                btn.classList.add(btnId.includes('mini') ? 'btn-outline-light' : 'btn-outline-secondary');
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
+        shuffleButtons.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('click', () => {
+                    if (socket && socket.connected) {
+                        socket.emit('shuffle');
+                        isShuffled = !isShuffled;
+                        shuffleButtons.forEach(btnId => {
+                            const btn = document.getElementById(btnId);
+                            if (btn) {
+                                btn.classList.toggle('active', isShuffled);
+                                if (isShuffled) {
+                                    btn.classList.remove('btn-outline-secondary', 'btn-outline-light');
+                                    btn.classList.add('btn-primary');
+                                } else {
+                                    btn.classList.remove('btn-primary');
+                                    btn.classList.add(btnId.includes('mini') ? 'btn-outline-light' : 'btn-outline-secondary');
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        // Volume controls
+        const volumeControls = ['volumeControl', 'miniVolumeControl'];
+        volumeControls.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('input', (e) => {
+                    if (player) {
+                        player.setVolume(e.target.value);
+                        // Sync both volume sliders
+                        volumeControls.forEach(controlId => {
+                            const control = document.getElementById(controlId);
+                            if (control && control !== e.target) {
+                                control.value = e.target.value;
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        // Progress bar seeking
+        document.getElementById('progressContainer').addEventListener('click', (e) => {
+            if (player && player.getDuration) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const position = (e.clientX - rect.left) / rect.width;
+                const duration = player.getDuration();
+                player.seekTo(duration * position);
+            }
+        });
+
+        // Mini player close
+        document.getElementById('closeMiniPlayer').addEventListener('click', hideMiniPlayer);
+
+        // Error message close
+        const errorClose = document.querySelector('.btn-close');
+        if (errorClose) {
+            errorClose.addEventListener('click', hideError);
+        }
+
+        // Initialize socket connection
+        connectSocket();
+    });
+</script>
+
+<style>
+    .hover-overlay {
+        transition: opacity 0.3s ease;
+    }
+
+    .position-relative:hover .hover-overlay {
+        opacity: 1 !important;
+    }
+
+    .progress {
+        cursor: pointer;
+    }
+
+    .progress:hover {
+        height: 8px !important;
+    }
+
+    .table-responsive {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .btn.active {
+        background-color: var(--bs-primary) !important;
+        border-color: var(--bs-primary) !important;
+        color: white !important;
+    }
+
+    #miniPlayer {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 768px) {
+        .col-md-4:last-child {
+            margin-top: 1rem;
+        }
+
+        #miniPlayer .col-md-4:last-child {
+            display: none;
+        }
+
+        .d-flex.gap-3 {
+            gap: 1rem !important;
+        }
+    }
+</style>
+
+{% endblock %}

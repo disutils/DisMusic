@@ -1,0 +1,53 @@
+[project]
+name = "dismusic"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.12",
+    "itsdangerous>=2.2.0",
+    "jinja2>=3.1.6",
+    "python-dotenv>=1.1.0",
+    "python-socketio[asgi]>=5.13.0",
+    "requests>=2.32.4",
+    "uvicorn>=0.34.3",
+    "yt-dlp>=2025.6.9",
+]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29.2",
+    "isort>=6.0.1",
+    "ruff>=0.11.13",
+]
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+skip = [".bzr", ".direnv", ".eggs", ".git", ".hg", ".mypy_cache", ".nox", ".pants.d", ".svn", ".tox", ".venv", "__pypackages__", "_build", "buck-out", "build", "dist", "node_modules", "venv"]
+
+[tool.ruff]
+line-length = 79
+lint.extend-select = ["ANN"]
+lint.ignore = ["ANN401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+docstring-code-line-length = 72
+
+[tool.basedpyright]
+exclude = ["**/node_modules", "**/__pycache__", "**/.*", "test*.py"]
+reportImportCycles = false
+reportUnnecessaryIsInstance = false
+reportImplicitStringConcatenation = false
+reportUnusedCallResult = false
+reportMissingTypeStubs = false
+reportAssignmentType = false
+reportRedeclaration = false
+reportAny = false
+reportExplicitAny = false
+reportUnusedParameter = false
+reportUnknownMemberType = false
