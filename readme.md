@@ -69,8 +69,8 @@ The application uses the following Socket.IO events:
 - `GET /` - Main application interface
 - `GET /api/search` - Music search endpoint
 - `POST /api/queue` - Queue management
-- `GET /api/lyrics` - Lyrics retrieval
-- `GET /api/stats` - User statistics
+- `GET /api/lyrics` - Lyrics retrieval (WIP)
+- `GET /api/stats` - User statistics (WIP)
 - `POST /auth/discord` - Discord OAuth callback
 
 ---
@@ -154,3 +154,4 @@ If you encounter any issues or have questions:
 [⭐ Star this repo](https://github.com/disutils-team/dismusic) • [🐛 Report Bug](https://github.com/disutils-team/dismusic/issues) • [💡 Request Feature](https://github.com/disutils-team/dismusic/issues)
 
 </div>
+
