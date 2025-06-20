@@ -72,7 +72,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    const socket = io("https://musicsocket.distools.dev")
+    const socket = io(BACKEND_URL);
     socketRef.current = socket
 
     socket.on("connect", () => {
@@ -177,7 +177,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const token = Cookies.get("dismusic_session")
     console.log("[MusicContext] dismusic_session token:", token)
     if (!token) return
-    fetch("https://musicsocket.distools.dev/api/user/info", {
+    fetch(`${BACKEND_URL}/api/user/info`, {
       method: "GET",
       headers: { "Authorization": `Bearer ${token}` }
     })
