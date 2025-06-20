@@ -87,6 +87,7 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
   const [hasMounted, setHasMounted] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -186,6 +187,39 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
     }
   }, [pathname]);
 
+  const handleLogout = async () => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3000";
+    const sessionToken = Cookies.get("dismusic_session");
+    try {
+      await fetch(`${backendUrl}/api/logout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {})
+        },
+        credentials: "include"
+      });
+      Cookies.remove("dismusic_session", { path: "/" });
+      await fetch(`${backendUrl}/api/client-logout-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "User logged out and cookie cleared (client+server)" })
+      });
+    } catch (err) {
+      await fetch(`${backendUrl}/api/client-logout-log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: `[ERROR] Logout failed: ${err}` })
+      });
+    } finally {
+      setTimeout(() => {
+        setToken(null);
+        setUnauthorized(true);
+        router.push("/login");
+      }, 3000); // Increased from 500ms to 3000ms for easier error copying
+    }
+  };
+
   if (!hasMounted) return null;
   if (unauthorized) {
     if (typeof window !== "undefined") {
@@ -267,7 +301,7 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
             </nav>
 
             {/* User Profile */}
-            <div className="p-4 border-t border-gray-800 flex items-center gap-3">
+            <div className="p-4 border-t border-gray-800 flex items-center gap-3 relative">
               {userpfpurl ? (
                 <img
                   src={userpfpurl}
@@ -281,9 +315,21 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                 </div>
               )}
               <span className="text-sm text-gray-300 truncate max-w-[100px]">{username || "User"}</span>
-              <Button variant="ghost" size="sm" className="ml-auto">
-                <Settings className="w-4 h-4" />
-              </Button>
+              <div className="relative ml-auto">
+                <Button variant="ghost" size="sm" onClick={() => setShowDropdown(v => !v)}>
+                  <Settings className="w-4 h-4" />
+                </Button>
+                {showDropdown && (
+                  <div className="absolute right-0 bottom-12 w-32 bg-gray-900 border border-gray-700 rounded shadow-lg z-50">
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-800"
+                      onClick={handleLogout}
+                    >
+                      Log out
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </aside>
 
