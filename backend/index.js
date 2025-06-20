@@ -19,7 +19,22 @@ const io = require("socket.io")(server, {
     }
 });
 
-app.use(cors());
+// CORS: allow credentials and only allow frontend origin
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.CORS_ORIGIN || "https://dismusic.distools.dev"
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
+
+
 app.use(express.json());
 app.use(express.static("public"));
 
@@ -386,7 +401,7 @@ app.get("/discord/callback", async (req, res) => {
     // Upsert user in DB and get session token
     const sessionToken = await upsertUser(userData);
     // Redirect to frontend login page with token as query param
-    res.redirect(`https://dismusic.distools.dev/login?token=${sessionToken}`);
+    res.redirect(`${process.env.CORS_ORIGIN || "https://dismusic.distools.dev"}/login?token=${sessionToken}`);
   } catch (err) {
     res.status(500).json({ error: "Discord OAuth error", details: err.message });
   }
@@ -572,6 +587,38 @@ app.get("/api/user/info", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch user info" });
   }
+});
+
+// --- LOGOUT API: Invalidate session token ---
+app.post("/api/logout", async (req, res) => {
+  const auth = req.headers["authorization"];
+  if (!auth || !auth.startsWith("Bearer ")) {
+    // Always clear the cookie, even if not authorized
+    res.clearCookie("dismusic_session", { path: "/", httpOnly: false, sameSite: "lax" });
+    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+  }
+  const sessionToken = auth.replace("Bearer ", "");
+  try {
+    const pool = global.pgPool;
+    // Remove the session token from the user (set to null)
+    await pool.query(
+      'UPDATE users SET sessiontoken = NULL WHERE sessiontoken = $1',
+      [sessionToken]
+    );
+    // Clear the cookie on logout
+    res.clearCookie("dismusic_session", { path: "/", httpOnly: false, sameSite: "lax" });
+    res.json({ success: true });
+  } catch (err) {
+    res.clearCookie("dismusic_session", { path: "/", httpOnly: false, sameSite: "lax" });
+    res.status(500).json({ error: "Failed to log out" });
+  }
+});
+
+// Log client logout events
+app.post("/api/client-logout-log", (req, res) => {
+  const { message } = req.body;
+  console.log("[CLIENT LOGOUT]", message);
+  res.json({ ok: true });
 });
 
 // Call this before starting the server
