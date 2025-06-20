@@ -7,7 +7,14 @@ const { Pool, Client } = require("pg");
 require("dotenv").config({ path: require('path').resolve(__dirname, '../.env') });
 const fetch = require("node-fetch");
 const crypto = require("crypto");
+const axios = require("axios");
 const ytpl = require("ytpl");
+const { getAppleMusicToken } = require("./appleMusicToken");
+const APPLE_MUSIC_TRACK_REGEX = /music\.apple\.com\/(?:[a-zA-Z-]+\/)?(?:album|song)\/(?:[\w-]+)\/(\d+)(?:\?i=(\d+))?/;
+const APPLE_MUSIC_PLAYLIST_REGEX = /music\.apple\.com\/(?:[a-zA-Z-]+\/)?playlist\/(?:[\w-]+)\/(pl\.[\w-]+)/;
+const APPLE_MUSIC_API_BASE = "https://amp-api.music.apple.com/v1/catalog";
+// Use Apple Music web API endpoints instead of amp-api.music.apple.com
+const APPLE_MUSIC_WEB_API_BASE = "https://music.apple.com/api/v1/catalog";
 
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +79,18 @@ function extractYouTubePlaylistId(url) {
     return match ? match[1] : null;
 }
 
+function extractAppleMusicTrackId(url) {
+    const match = url.match(APPLE_MUSIC_TRACK_REGEX);
+    // For /album/ URLs with ?i=, match[2] is the trackId; for /song/ URLs, match[1] is the trackId
+    if (match && match[2]) return match[2];
+    if (match && match[1]) return match[1];
+    return null;
+}
+function extractAppleMusicPlaylistId(url) {
+    const match = url.match(APPLE_MUSIC_PLAYLIST_REGEX);
+    return match ? match[1] : null;
+}
+
 function formatDuration(seconds) {
     if (!seconds || isNaN(seconds)) return "-";
     const mins = Math.floor(seconds / 60);
@@ -107,6 +126,28 @@ async function findYouTubeUrl(searchString) {
         return { url: video.url, duration: video.duration.seconds };
     }
     return null;
+}
+
+async function fetchAppleMusicTrack(trackId, storefront = "us") {
+    const token = await getAppleMusicToken();
+    const res = await axios.get(`${APPLE_MUSIC_WEB_API_BASE}/${storefront}/songs/${trackId}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Origin: "https://music.apple.com"
+        }
+    });
+    console.log("[APPLE MUSIC TRACK RAW DATA]", JSON.stringify(res.data, null, 2));
+    return res.data.data[0];
+}
+async function fetchAppleMusicPlaylist(playlistId, storefront = "us") {
+    const token = await getAppleMusicToken();
+    const res = await axios.get(`${APPLE_MUSIC_WEB_API_BASE}/${storefront}/playlists/${playlistId}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Origin: "https://music.apple.com"
+        }
+    });
+    return res.data.data[0];
 }
 
 io.on("connection", (socket) => {
@@ -171,7 +212,39 @@ io.on("connection", (socket) => {
                 return;
             }
 
-            let track;
+            // --- APPLE MUSIC PLAYLIST ---
+            const applePlaylistId = extractAppleMusicPlaylistId(query);
+            if (applePlaylistId) {
+                const playlist = await fetchAppleMusicPlaylist(applePlaylistId);
+                const tracks = (playlist.relationships.tracks.data || []);
+                userQueues[socket.id] = tracks.map(track => ({
+                    name: track.attributes.name,
+                    artists: [{ name: track.attributes.artistName }],
+                    albumCover: track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || "",
+                    duration: Math.round(track.attributes.durationInMillis / 1000),
+                    appleMusicUrl: track.attributes.url
+                }));
+                emitQueueUpdate(socket);
+                if (userQueues[socket.id].length > 0) {
+                    socket.emit("playAppleMusic", { url: userQueues[socket.id][0].appleMusicUrl });
+                }
+                return;
+            }
+            // --- APPLE MUSIC TRACK ---
+            const appleTrackId = extractAppleMusicTrackId(query);
+            if (appleTrackId) {
+                const track = await fetchAppleMusicTrack(appleTrackId);
+                userQueues[socket.id] = [{
+                    name: track.attributes.name,
+                    artists: [{ name: track.attributes.artistName }],
+                    albumCover: track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || "",
+                    duration: Math.round(track.attributes.durationInMillis / 1000),
+                    appleMusicUrl: track.attributes.url
+                }];
+                emitQueueUpdate(socket);
+                socket.emit("playAppleMusic", { url: track.attributes.url });
+                return;
+            }
             // --- SPOTIFY TRACK BY ID ---
             const trackId = extractSpotifyTrackId(query);
             if (trackId) {
@@ -266,6 +339,36 @@ io.on("connection", (socket) => {
                 return;
             }
 
+            // --- APPLE MUSIC PLAYLIST ---
+            const applePlaylistId = extractAppleMusicPlaylistId(query);
+            if (applePlaylistId) {
+                const playlist = await fetchAppleMusicPlaylist(applePlaylistId);
+                const tracks = (playlist.relationships.tracks.data || []);
+                userQueues[socket.id] = [...(userQueues[socket.id] || []), ...tracks.map(track => ({
+                    name: track.attributes.name,
+                    artists: [{ name: track.attributes.artistName }],
+                    albumCover: track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || "",
+                    duration: Math.round(track.attributes.durationInMillis / 1000),
+                    appleMusicUrl: track.attributes.url
+                }))];
+                emitQueueUpdate(socket);
+                return;
+            }
+            // --- APPLE MUSIC TRACK ---
+            const appleTrackId = extractAppleMusicTrackId(query);
+            if (appleTrackId) {
+                const track = await fetchAppleMusicTrack(appleTrackId);
+                userQueues[socket.id].push({
+                    name: track.attributes.name,
+                    artists: [{ name: track.attributes.artistName }],
+                    albumCover: track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || "",
+                    duration: Math.round(track.attributes.durationInMillis / 1000),
+                    appleMusicUrl: track.attributes.url
+                });
+                emitQueueUpdate(socket);
+                return;
+            }
+
             let track;
             // --- SPOTIFY TRACK BY ID ---
             const trackId = extractSpotifyTrackId(query);
@@ -335,6 +438,39 @@ app.post("/api/spotify", async (req, res) => {
             return res.status(500).json({ error: err.body.error.message, details: err.body });
         }
         res.status(500).json({ error: "Failed to fetch track or playlist data", details: err && err.message ? err.message : err });
+    }
+});
+
+// --- APPLE MUSIC API: GET track or playlist info ---
+app.post("/api/applemusic", async (req, res) => {
+    const { url } = req.body;
+    try {
+        const playlistId = extractAppleMusicPlaylistId(url);
+        if (playlistId) {
+            const playlist = await fetchAppleMusicPlaylist(playlistId);
+            const covers = (playlist.relationships.tracks.data || [])
+                .slice(0, 4)
+                .map(track => track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || "")
+                .filter(Boolean);
+            return res.json({
+                name: playlist.attributes.name,
+                covers,
+                tracks: (playlist.relationships.tracks.data || []).map(track => ({
+                    albumCover: track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || "",
+                    name: track.attributes.name || "",
+                }))
+            });
+        }
+        const trackId = extractAppleMusicTrackId(url);
+        if (!trackId) return res.status(400).json({ error: "Invalid Apple Music track or playlist URL" });
+        const track = await fetchAppleMusicTrack(trackId);
+        res.json({
+            ...track.attributes,
+            albumCover: track.attributes.artwork?.url?.replace('{w}x{h}bb', '300x300bb') || ""
+        });
+    } catch (err) {
+        console.error("/api/applemusic error:", err);
+        res.status(500).json({ error: "Failed to fetch Apple Music track or playlist data", details: err && err.message ? err.message : err });
     }
 });
 
