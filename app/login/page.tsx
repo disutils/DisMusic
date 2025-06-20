@@ -31,8 +31,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#18181b]">
       <div className="bg-[#232323] rounded-lg shadow-lg p-10 flex flex-col items-center w-full max-w-md">
         <Image src="/placeholder-logo.svg" alt="Logo" width={64} height={64} className="mb-6" />
-        <h1 className="text-3xl font-bold text-white mb-2">Sign in to Lavamusic</h1>
-        <p className="text-gray-400 mb-8">Access your playlists, queue, and more.</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Sign in to DisMusic</h1>
+        <p className="text-gray-400 mb-8">Access your playlists, favorites, and more.</p>
         <Button
           onClick={handleDiscordLogin}
           className="w-full flex items-center justify-center gap-3 bg-[#5865F2] hover:bg-[#4752c4] text-white text-lg font-semibold py-3 rounded-lg shadow"
