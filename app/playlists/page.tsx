@@ -6,6 +6,8 @@ import { useState, useEffect } from "react"
 import Cookies from "js-cookie"
 import { useMusic } from "../context/MusicContext"
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 export default function PlaylistsPage() {
   const [playlistUrl, setPlaylistUrl] = useState("")
   const [playlists, setPlaylists] = useState<any[]>([])
@@ -21,7 +23,7 @@ export default function PlaylistsPage() {
     setDidUserEdit(false)
     console.log("[PlaylistsPage] dismusic_session token:", token)
     if (!token) return
-    fetch("https://musicsocket.distools.dev/api/user/playlists", {
+    fetch(`${BACKEND_URL}/api/user/playlists`, {
       method: "GET",
       headers: { "Authorization": `Bearer ${token}` }
     })
@@ -53,7 +55,7 @@ export default function PlaylistsPage() {
   useEffect(() => {
     if (!sessionToken || !loaded || !didUserEdit) return
     console.log("[PlaylistsPage] Saving playlists to backend:", playlists)
-    fetch("https://musicsocket.distools.dev/api/user/playlists", {
+    fetch(`${BACKEND_URL}/api/user/playlists`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -78,7 +80,7 @@ export default function PlaylistsPage() {
     if (!playlistUrl.startsWith("https://open.spotify.com/playlist/")) return
     let playlistInfo = { url: playlistUrl, name: playlistUrl, covers: [] as string[] };
     try {
-      const res = await fetch("https://musicsocket.distools.dev/api/spotify", {
+      const res = await fetch(`${BACKEND_URL}/api/spotify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: playlistUrl })
@@ -105,7 +107,7 @@ export default function PlaylistsPage() {
   const handleDeletePlaylist = async (playlistIndex: number) => {
     if (!sessionToken) return;
     try {
-      const res = await fetch("https://musicsocket.distools.dev/api/user/playlists", {
+      const res = await fetch(`${BACKEND_URL}/api/user/playlists`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
