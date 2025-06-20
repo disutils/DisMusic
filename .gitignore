@@ -1,0 +1,30 @@
+# Node modules
+/node_modules/
+
+# Next.js build output
+/.next/
+/out/
+/build/
+
+# Production
+/.vercel/
+.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*.local
+.env.local
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Editor directories and files
+.vscode/
+.idea/
