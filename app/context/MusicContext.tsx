@@ -51,6 +51,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const playerRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
 
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://musicsocket.distools.dev";
+
   // Load YouTube IFrame API
   useEffect(() => {
     if (typeof window === "undefined") return
