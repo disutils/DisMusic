@@ -122,8 +122,8 @@ If you encounter any issues or have questions:
 - ✅ Real-time synchronization
 - ✅ Web interface
 
-### Upcoming Features (1.3A)
-- 🔄 Inhouse playlist system!
+### Upcoming Features / WIP (1.3A)
+- 🔄 Inhouse playlist system! ✅ Implemented but buggy
 - 🔄 Favorite tracks system
 - 🔄 Advanced playlist features
 - 🔄 Custom themes
