@@ -273,8 +273,8 @@ io.on("connection", (socket) => {
                 (err.body?.error?.message === 'The access token expired' ||
                  (typeof err.message === 'string' && err.message.includes('The access token expired')))
             ) {
-                console.error("Access token expired. Restarting backend...");
-                process.exit(1);
+                console.error("Access token expired. Refreshing token...");
+                await getSpotifyToken();
             }
         }
     });
