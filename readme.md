@@ -121,14 +121,16 @@ If you encounter any issues or have questions:
 - ✅ Real-time synchronization
 - ✅ Web interface
 
-### Upcoming Features (v1.1)
-- 🔄 Mobile app (React Native)
+### Upcoming Features (A1.3)
+- 🔄 Inhouse playlist system!
+- 🔄 Favorite tracks system
 - 🔄 Advanced playlist features
-- 🔄 Social sharing
-- 🔄 Offline mode
 - 🔄 Custom themes
 
 ### Future Plans (v2.0)
+- 🔮 Offline mode
+- 🔮 Social sharing
+- 🔮 Mobile app (React Native)
 - 🔮 AI-powered recommendations
 - 🔮 Voice commands
 - 🔮 Multi-room audio
