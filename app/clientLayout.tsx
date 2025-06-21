@@ -30,6 +30,7 @@ import {
   Disc3,
 } from "lucide-react"
 import { useMusic } from "./context/MusicContext"
+import { Badge } from "@/components/ui/badge"
 
 declare global {
   interface Window {
@@ -321,6 +322,14 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                 </Button>
                 {showDropdown && (
                   <div className="absolute right-0 bottom-12 w-32 bg-gray-900 border border-gray-700 rounded shadow-lg z-50">
+                    <div className="flex flex-col gap-1 p-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-400">Version</span>
+                        <Badge variant="secondary" className="ml-2" style={{background: 'linear-gradient(90deg, #d4d4d4 0%, #b0b0b0 100%)', color: '#222', border: '1px solid #bbb'}}>
+                          {process.env.NEXT_PUBLIC_VERSION}
+                        </Badge>
+                      </div>
+                    </div>
                     <button
                       className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-800"
                       onClick={handleLogout}
