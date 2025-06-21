@@ -555,10 +555,8 @@ async function ensureDatabaseAndTable() {
         console.log("Database 'music' created.");
     } catch (err) {
         if (err.code === '42P04') {
-            // Database already exists
             console.log("Database 'music' already exists.");
         } else if (err.code === '3D000') {
-            // Database does not exist and cannot be created
             console.error("Cannot create database: ", err);
         } else {
             console.error("Error creating database:", err);
@@ -567,12 +565,13 @@ async function ensureDatabaseAndTable() {
         await adminClient.end();
     }
 
-    // Now connect to the 'music' database and create the table if it doesn't exist
+    // Now connect to the 'music' database and create the tables if they don't exist
     const pool = new Pool({
         connectionString: process.env.DATABASE_URL,
         ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require') ? { rejectUnauthorized: false } : false
     });
     try {
+        // Users table (existing)
         await pool.query(`CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
             userid TEXT UNIQUE,
@@ -582,9 +581,24 @@ async function ensureDatabaseAndTable() {
             userqueue JSONB,
             sessiontoken TEXT
         )`);
-        console.log("Table 'users' ensured.");
+        // User playlists table (new)
+        await pool.query(`CREATE TABLE IF NOT EXISTS user_playlists (
+            id SERIAL PRIMARY KEY,
+            userid TEXT REFERENCES users(userid) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            tracks JSONB DEFAULT '[]',
+            created_at TIMESTAMP DEFAULT NOW()
+        )`);
+        // User favorite songs table (new)
+        await pool.query(`CREATE TABLE IF NOT EXISTS user_favorites (
+            id SERIAL PRIMARY KEY,
+            userid TEXT REFERENCES users(userid) ON DELETE CASCADE,
+            tracks JSONB DEFAULT '[]',
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`);
+        console.log("Tables 'users', 'user_playlists', and 'user_favorites' ensured.");
     } catch (err) {
-        console.error("Error creating table:", err);
+        console.error("Error creating tables:", err);
     }
     return pool;
 }
