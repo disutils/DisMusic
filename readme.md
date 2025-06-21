@@ -72,6 +72,7 @@ The application uses the following Socket.IO events:
 - `GET /api/lyrics` - Lyrics retrieval (WIP)
 - `GET /api/stats` - User statistics (WIP)
 - `POST /auth/discord` - Discord OAuth callback
+- `POST /api/user/playlist/create` - Create a new in-house playlist for the user
 
 ---
 
@@ -114,20 +115,20 @@ If you encounter any issues or have questions:
 
 ## 🗺️ Roadmap
 
-### Current Version (A1.2)
+### Current Version (1.2A)
 - ✅ Basic music streaming
 - ✅ Queue management
 - ✅ Discord OAuth
 - ✅ Real-time synchronization
 - ✅ Web interface
 
-### Upcoming Features (A1.3)
+### Upcoming Features (1.3A)
 - 🔄 Inhouse playlist system!
 - 🔄 Favorite tracks system
 - 🔄 Advanced playlist features
 - 🔄 Custom themes
 
-### Future Plans (v2.0)
+### Future Plans (v1.0)
 - 🔮 Offline mode
 - 🔮 Social sharing
 - 🔮 Mobile app (React Native)
@@ -156,4 +157,3 @@ If you encounter any issues or have questions:
 [⭐ Star this repo](https://github.com/disutils-team/dismusic) • [🐛 Report Bug](https://github.com/disutils-team/dismusic/issues) • [💡 Request Feature](https://github.com/disutils-team/dismusic/issues)
 
 </div>
-
