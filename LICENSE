@@ -1,0 +1,212 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (c) 2025 Disutils Team
+
+Everyone is permitted to copy and distribute verbatim copies
+of this license document, but changing it is not allowed.
+
+Preamble
+
+The GNU General Public License is a free, copyleft license for
+software and other kinds of works.
+
+Terms and Conditions for Copying, Distribution and Modification
+
+0. This license applies to any program or other work which contains a
+   notice placed by the copyright holder saying it may be distributed
+   under the terms of this General Public License. The "Program", below,
+   refers to any such program or work, and a "work based on the Program"
+   means either the Program or any derivative work under copyright law:
+   that is, a work containing the Program or a portion of it, either
+   verbatim or with modifications and/or translated into another language.
+   (Hereinafter, translation is included without limitation in the term
+   "modification".) Each licensee is addressed as "you".
+
+   Activities other than copying, distribution and modification are not
+   covered by this License; they are outside its scope. The act of running
+   the Program is not restricted, and the results obtained from it are
+   not covered by this License, unless these results include works based
+   on the Program.
+
+1. You may copy and distribute verbatim copies of the Program's source
+   code as you receive it, in any medium, provided that you conspicuously
+   and appropriately publish on each copy an appropriate copyright notice
+   and disclaimer of warranty; keep intact all the notices that refer to
+   this License and to the absence of any warranty; and distribute a copy
+   of this License along with the Program.
+
+2. You may modify your copy or copies of the Program or any portion of
+   it, thus forming a work based on the Program, and copy and distribute
+   such modifications or work under the terms of Section 1 above,
+   provided that you also meet all of these conditions:
+
+   a) You must cause the modified files to carry prominent notices
+      stating that you changed the files and the date of any change.
+
+   b) You must license the entire work, as a whole, under this License
+      to anyone who possesses a copy. This License will therefore apply,
+      along with any applicable section 7 additional terms, to the whole
+      of the work, and all its parts, regardless of how they are
+      packaged. This does not in itself create any obligation to
+      distribute any proprietary software incorporated into the
+      Program.
+
+   c) If the modified program normally reads commands interactively
+      when run, or accepts input files, or both, you must cause it, when
+      given any of these commands or input files, to print or display an
+      explanation stating how to view a copy of this License along with
+      the Program.
+
+3. You may also combine or link, an equivalent combination or linking
+   of the Program's source with other code or data, thus forming a work
+   based on the Program, and copy and distribute such combinations or
+   works under the terms of Section 1 above, provided that you also meet
+   all of these conditions:
+
+   a) The combined or linked program must itself be a software
+      library.
+
+   b) You must cause the modified files to carry prominent notices
+      stating that you changed the files and the date of any change.
+
+   c) You must license the entire work, as a whole, under this License
+      to anyone who possesses a copy. This License will therefore apply,
+      along with any applicable section 7 additional terms, to the whole
+      of the work, and all its parts, regardless of how they are
+      packaged. This does not in itself create any obligation to
+      distribute any proprietary software incorporated into the
+      Program.
+
+   d) If the combined or linked program normally reads commands
+      interactively when run, or accepts input files, or both, you must
+      cause it, when given any of these commands or input files, to
+      print or display an explanation stating how to view a copy of this
+      License along with the Program.
+
+4. You may not copy, modify, sublicense, or distribute the Program
+   except as expressly provided under this License. Any attempt
+   otherwise to copy, modify, sublicense, or distribute the Program is
+   void, and will automatically terminate your rights under this License.
+   However, parties who have received copies, or rights, from you under
+   this License will not have their licenses terminated so long as such
+   parties remain in full compliance.
+
+5. You are not required to accept this License, since you have not
+   signed it. However, nothing else grants you permission to modify or
+   distribute the Program or its derivative works. These actions are
+   prohibited by law if you do not accept this License. Therefore, by
+   modifying or distributing the Program (or any work based on the
+   Program), you indicate your acceptance of this License to do so, and
+   all its terms and conditions.
+
+6. Each time you redistribute the Program (or any work based on the
+   Program), the recipient automatically receives a license from the
+   original licensors to run, modify and redistribute the Program subject
+   to these terms and conditions. You may not impose any further
+   restrictions on the recipients' exercise of the rights granted herein.
+   You are not responsible for enforcing compliance by third parties to
+   this License.
+
+7. Additional Terms. "Additional permissions" are terms that supplement
+   the terms of this License by making exceptions from one or more of
+   its conditions. For example, additional permissions may take the form
+   of allowing proprietary software to be linked with the Program,
+   permitting the Program to be combined with proprietary software
+   packages, or permitting proprietary commands to be used with the
+   Program. No additional permission or other waiver of any provision
+   of this License shall be effective unless separately stated in
+   writing and signed by the copyright holder.
+
+   Notwithstanding any other provision of this License, for material
+   you did not create yourself you may add your own copyright statement
+   to the material, and license it under different terms, provided that
+   you also meet all of these conditions:
+
+   a) You must cause the modified files to carry prominent notices
+      stating that you changed the files and the date of any change.
+
+   b) You must license the entire work, as a whole, under this License
+      to anyone who possesses a copy. This License will therefore apply,
+      along with any applicable section 7 additional terms, to the whole
+      of the work, and all its parts, regardless of how they are
+      packaged. This does not in itself create any obligation to
+      distribute any proprietary software incorporated into the
+      Program.
+
+   c) If the modified program normally reads commands interactively
+      when run, or accepts input files, or both, you must cause it, when
+      given any of these commands or input files, to print or display an
+      explanation stating how to view a copy of this License along with
+      the Program.
+
+8. NO WARRANTY
+
+   8.1. Unless required by applicable law or agreed to in writing,
+        licensors provide the Program (and each contributor provides its
+        Contributions) on an "AS IS" basis, without warranties or
+        conditions of any kind, either express or implied, including,
+        but not limited to, warranties of merchantability, fitness for a
+        particular purpose, non-infringement, or title. You are solely
+        responsible for determining the appropriateness of using or
+        redistributing the Program and assume any risks associated with
+        your exercise of permissions under this License.
+
+   8.2. The entire risk arising out of use or performance of the Program
+        and any accompanying materials remains with you.
+
+9. Limitation of Liability
+
+   9.1. To the fullest extent permitted by applicable law, in no event
+        shall any licensor, or any contributor, be liable for any
+        indirect, special, incidental, or consequential damages
+        whatsoever (including, but not limited to, damages for loss of
+        profits, business interruption, or loss of information) arising
+        out of the use or inability to use the Program, even if such
+        damages are foreseeable or if the licensor has been advised of
+        the possibility of such damages.
+
+   9.2. In no event shall any licensor, or any contributor, be liable
+        for any damages arising from your modification of the Program,
+        or from any other person's use or modification of the Program,
+        or from any combination of the Program with other software or
+        hardware.
+
+10. Termination
+
+    10.1. This License and the rights granted hereunder will terminate
+          automatically upon any breach by you of the terms of this
+          License. Individuals or entities who have received
+          derivative works or rights from you under this License, other
+          than as a result of your breach, will not have their licenses
+          terminated provided such individuals or entities remain in
+          compliance with these terms and conditions.
+
+    10.2. If you bring a copyright claim or any claim involving
+          patent rights or other intellectual property rights against
+          any contributor over the Program, your rights under this
+          License shall terminate immediately.
+
+    10.3. Sections 8, 9, and 10 shall survive termination of this
+          License.
+
+11. Miscellaneous
+
+    11.1. This License is governed by and construed in accordance with
+          the laws of the jurisdiction specified in the copyright notice
+          accompanying the Program, or if no such jurisdiction is
+          specified, the laws of the State of New York, without regard
+          to its conflict of law provisions.
+
+    11.2. If any provision of this License is held to be unenforceable,
+          such provision shall be reformed only to the extent
+          necessary to make it enforceable.
+
+    11.3. This License constitutes the entire agreement between the
+          parties with respect to the subject matter hereof and
+          supersedes all prior or contemporaneous understandings and
+          agreements, whether written or oral, regarding such subject
+          matter.
+
+    11.4. You should have received a copy of the GNU General Public License
+          along with this program.  If not, see <https://www.gnu.org/licenses/>.
