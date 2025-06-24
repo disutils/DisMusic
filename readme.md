@@ -118,14 +118,15 @@ If you encounter any issues or have questions:
 - ✅ Discord OAuth
 - ✅ Real-time synchronization
 - ✅ Web interface
-- ✅ Mobile support (responsive design)
 
 
 ### Upcoming Features / WIP (1.3A)
-- 🔄 Inhouse playlist system! ✅ Implemented but buggy
+- ✅ Inhouse playlist system! Implemented but buggy
 - 🔄 Favorite tracks system
 - 🔄 Advanced playlist features
 - 🔄 Custom themes
+- ✅ Mobile support (responsive design)
+
 
 ### Future Plans (v1.0)
 - 🔮 Offline mode
