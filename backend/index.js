@@ -219,17 +219,57 @@ io.on("connection", (socket) => {
             // --- YOUTUBE PLAYLIST ---
             const ytPlaylistId = extractYouTubePlaylistId(query);
             if (ytPlaylistId) {
-                const playlist = await ytpl(ytPlaylistId, { limit: 100 });
-                userQueues[socket.id] = playlist.items.map(item => ({
-                    name: item.title,
-                    artists: [{ name: item.author.name }],
-                    albumCover: item.bestThumbnail.url,
-                    duration: item.durationSec ? parseInt(item.durationSec) : null,
-                    youtubeUrl: item.shortUrl
-                }));
-                emitQueueUpdate(socket);
-                if (userQueues[socket.id].length > 0) {
-                    socket.emit("playYouTube", { url: userQueues[socket.id][0].youtubeUrl });
+                try {
+                    // Try to use ytpl with options that might help with token issues
+                    const playlist = await ytpl(ytPlaylistId, {
+                        limit: 100,
+                        requestOptions: {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                            }
+                        }
+                    });
+
+                    userQueues[socket.id] = playlist.items.map(item => ({
+                        name: item.title,
+                        artists: [{ name: item.author.name }],
+                        albumCover: item.bestThumbnail.url,
+                        duration: item.durationSec ? parseInt(item.durationSec) : null,
+                        youtubeUrl: item.shortUrl || item.url
+                    }));
+
+                    emitQueueUpdate(socket);
+                    if (userQueues[socket.id].length > 0) {
+                        socket.emit("playYouTube", { url: userQueues[socket.id][0].youtubeUrl });
+                    }
+                } catch (err) {
+                    console.error("YouTube playlist fetch error:", err);
+                    // Fallback: Extract the first video ID from playlist URL and play it
+                    const videoId = extractYouTubeVideoId(query);
+                    if (videoId) {
+                        try {
+                            const result = await ytSearch({ videoId });
+                            if (result && result.title) {
+                                userQueues[socket.id] = [{
+                                    name: result.title,
+                                    artists: [{ name: result.author.name }],
+                                    albumCover: result.thumbnail,
+                                    duration: result.seconds,
+                                    youtubeUrl: result.url
+                                }];
+                                emitQueueUpdate(socket);
+                                socket.emit("playYouTube", { url: result.url });
+                            } else {
+                                // Last resort: just return a generic error message to the client
+                                socket.emit("error", { message: "Could not play this YouTube playlist. Try using a direct video link instead." });
+                            }
+                        } catch (innerErr) {
+                            console.error("YouTube video fallback error:", innerErr);
+                            socket.emit("error", { message: "Could not play this YouTube playlist or extract videos from it." });
+                        }
+                    } else {
+                        socket.emit("error", { message: "Invalid YouTube playlist. Please check the URL and try again." });
+                    }
                 }
                 return;
             }
@@ -358,16 +398,58 @@ io.on("connection", (socket) => {
             // --- YOUTUBE PLAYLIST ---
             const ytPlaylistId = extractYouTubePlaylistId(query);
             if (ytPlaylistId) {
-                const playlist = await ytpl(ytPlaylistId, { limit: 100 });
-                userQueues[socket.id] = [...(userQueues[socket.id] || []), ...playlist.items.map(item => ({
-                    name: item.title,
-                    artists: [{ name: item.author.name }],
-                    albumCover: item.bestThumbnail.url,
-                    duration: item.durationSec ? parseInt(item.durationSec) : null,
-                    youtubeUrl: item.shortUrl
-                }))];
-                emitQueueUpdate(socket);
-                return;
+                try {
+                    // Try to use ytpl with options that might help with token issues
+                    const playlist = await ytpl(ytPlaylistId, {
+                        limit: 100,
+                        requestOptions: {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                            }
+                        }
+                    });
+                    userQueues[socket.id] = [...(userQueues[socket.id] || []), ...playlist.items.map(item => ({
+                        name: item.title,
+                        artists: [{ name: item.author.name }],
+                        albumCover: item.bestThumbnail.url,
+                        duration: item.durationSec ? parseInt(item.durationSec) : null,
+                        youtubeUrl: item.shortUrl || item.url
+                    }))];
+                    emitQueueUpdate(socket);
+                    return;
+                } catch (err) {
+                    console.error("YouTube playlist fetch error in addToQueue:", err);
+                    // Alternative approach: use ytsearch to search for the playlist and get some videos
+                    try {
+                        // For playlists, extract just the playlist name/ID for search
+                        const searchQuery = query.includes('list=')
+                            ? `playlist ${query.split('list=')[1].split('&')[0]}`
+                            : query;
+                        const searchResults = await ytSearch(searchQuery);
+
+                        if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
+                            // Just add the first video as a fallback
+                            const video = searchResults.videos[0];
+                            userQueues[socket.id].push({
+                                name: video.title,
+                                artists: [{ name: video.author.name }],
+                                albumCover: video.thumbnail,
+                                duration: video.seconds,
+                                youtubeUrl: video.url
+                            });
+                            emitQueueUpdate(socket);
+                            socket.emit("message", {
+                                type: "warning",
+                                content: "Could not load full playlist, but added first video from search results."
+                            });
+                            return;
+                        }
+                    } catch (innerErr) {
+                        console.error("Fallback YouTube search error:", innerErr);
+                    }
+                    socket.emit("error", { message: "Could not add YouTube playlist to queue. Try using a direct video link instead." });
+                    return;
+                }
             }
             // --- YOUTUBE SINGLE VIDEO ---
             const ytVideoId = extractYouTubeVideoId(query);
@@ -527,6 +609,51 @@ app.post("/api/applemusic", async (req, res) => {
     } catch (err) {
         console.error("/api/applemusic error:", err);
         res.status(500).json({ error: "Failed to fetch Apple Music track or playlist data", details: err && err.message ? err.message : err });
+    }
+});
+
+// --- YOUTUBE API: GET track or playlist info ---
+app.post("/api/youtube", async (req, res) => {
+    const { url } = req.body;
+    try {
+        // Extract playlist ID from YouTube or YouTube Music URL
+        const playlistId = extractYouTubePlaylistId(url);
+        if (!playlistId) {
+            return res.status(400).json({ error: "Invalid YouTube playlist URL" });
+        }
+
+        try {
+            // Use ytpl to fetch playlist information
+            const playlist = await ytpl(playlistId, {
+                limit: 50,
+                requestOptions: {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                }
+            });
+
+            // Format the response to match what our frontend expects
+            const formattedResponse = {
+                title: playlist.title,
+                name: playlist.title,
+                thumbnail: playlist.bestThumbnail?.url,
+                tracks: playlist.items.map(item => ({
+                    name: item.title,
+                    artist: item.author.name,
+                    thumbnail: item.bestThumbnail?.url || null,
+                    duration: item.durationSec || null
+                }))
+            };
+
+            return res.json(formattedResponse);
+        } catch (err) {
+            console.error("YouTube playlist fetch error:", err);
+            return res.status(500).json({ error: "Failed to fetch YouTube playlist", details: err.message });
+        }
+    } catch (err) {
+        console.error("/api/youtube error:", err);
+        res.status(500).json({ error: "Failed to fetch YouTube data", details: err.message });
     }
 });
 
