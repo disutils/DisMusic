@@ -141,10 +141,10 @@ If you encounter any issues or have questions:
 
 ## 📊 Stats (Repo not public yet)
 
-![GitHub stars](https://img.shields.io/github/stars/disutils-team/dismusic?style=social)
-![GitHub forks](https://img.shields.io/github/forks/disutils-team/dismusic?style=social)
-![GitHub issues](https://img.shields.io/github/issues/disutils-team/dismusic)
-![GitHub license](https://img.shields.io/github/license/disutils-team/dismusic)
+![GitHub stars](https://img.shields.io/github/stars/disutils/DisMusic?style=social)
+![GitHub forks](https://img.shields.io/github/forks/disutils/DisMusic?style=social)
+![GitHub issues](https://img.shields.io/github/issues/disutils/DisMusic)
+![GitHub license](https://img.shields.io/github/license/disutils/DisMusic)
 
 ---
 
