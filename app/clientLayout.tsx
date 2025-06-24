@@ -28,6 +28,8 @@ import {
   Home,
   Search,
   Disc3,
+  Menu,
+  X,
 } from "lucide-react"
 import { useMusic } from "./context/MusicContext"
 import { Badge } from "@/components/ui/badge"
@@ -89,6 +91,7 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
   const [token, setToken] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -231,17 +234,53 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
 
   return (
       <div className="h-screen bg-[#0a0a0a] text-white flex flex-col">
+        {/* Mobile Header - Only visible on mobile devices */}
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#121212] border-b border-gray-800">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="p-1 text-white"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </Button>
+          <h1 className="text-lg font-bold text-white">DisMusic</h1>
+          <div className="w-8"></div> {/* Spacer for alignment */}
+        </div>
+
         {/* Main Layout */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <aside className="w-64 bg-[#121212] border-r border-gray-800 flex flex-col">
-            {/* Logo */}
-            <div className="p-6 border-b border-gray-800">
+          {/* Mobile Sidebar Backdrop */}
+          {mobileMenuOpen && (
+            <div
+              className="md:hidden fixed inset-0 bg-black bg-opacity-70 z-40"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+          )}
+
+          {/* Sidebar - Desktop: always visible, Mobile: conditionally visible */}
+          <aside
+            className={`bg-[#121212] border-r border-gray-800 flex-col md:flex
+                      fixed md:static inset-y-0 left-0 z-50 md:z-0 
+                      transition-transform duration-300 ease-in-out
+                      w-[260px] md:w-64
+                      ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+          >
+            {/* Logo - Only visible on desktop since we have the mobile header */}
+            <div className="p-6 border-b border-gray-800 hidden md:block">
               <h1 className="text-xl font-bold text-white">DisMusic</h1>
             </div>
 
+            {/* Close button for mobile - Top right */}
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="absolute top-3 right-3 text-gray-400 md:hidden"
+            >
+              <X className="h-6 w-6" />
+            </button>
+
             {/* Navigation */}
-            <nav className="flex-1 p-4">
+            <nav className="flex-1 p-4 overflow-y-auto">
               <div className="space-y-2 mb-8">
                 {navigationItems.map((item) => (
                     <Button
@@ -252,7 +291,10 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                                 ? "bg-gray-800 text-white hover:bg-gray-700"
                                 : "text-gray-300 hover:text-white hover:bg-gray-800"
                         }`}
-                        onClick={() => router.push(item.path)}
+                        onClick={() => {
+                          router.push(item.path);
+                          if (mobileMenuOpen) setMobileMenuOpen(false);
+                        }}
                     >
                       <item.icon className="w-5 h-5 mr-3" />
                       {item.label}
@@ -272,7 +314,10 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                                   ? "bg-gray-800 text-white hover:bg-gray-700"
                                   : "text-gray-300 hover:text-white hover:bg-gray-800"
                           }`}
-                          onClick={() => router.push(item.path)}
+                          onClick={() => {
+                            router.push(item.path);
+                            if (mobileMenuOpen) setMobileMenuOpen(false);
+                          }}
                       >
                         <item.icon className="w-5 h-5 mr-3" />
                         {item.label}
@@ -289,12 +334,20 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                             ? "bg-gray-800 text-white hover:bg-gray-700"
                             : "text-gray-300 hover:text-white hover:bg-gray-800"
                     }`}
-                    onClick={() => router.push("/downloads")}
+                    onClick={() => {
+                      router.push("/downloads");
+                      if (mobileMenuOpen) setMobileMenuOpen(false);
+                    }}
                 >
                   <Download className="w-5 h-5 mr-3" />
                   Downloads
                 </Button>
-                <Button className="w-full justify-start bg-red-600 hover:bg-red-700 text-white">
+                <Button
+                  className="w-full justify-start bg-red-600 hover:bg-red-700 text-white"
+                  onClick={() => {
+                    if (mobileMenuOpen) setMobileMenuOpen(false);
+                  }}
+                >
                   <Headphones className="w-5 h-5 mr-3" />
                   Devices
                 </Button>
@@ -304,16 +357,16 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
             {/* User Profile */}
             <div className="p-4 border-t border-gray-800 flex items-center gap-3 relative">
               {userpfpurl ? (
-                <img
-                  src={userpfpurl}
-                  alt={username || "User"}
-                  className="w-8 h-8 rounded-full object-cover bg-gray-600"
-                  onError={e => { e.currentTarget.src = "/placeholder-user.jpg"; }}
-                />
+                  <img
+                      src={userpfpurl}
+                      alt={username || "User"}
+                      className="w-8 h-8 rounded-full object-cover bg-gray-600"
+                      onError={e => { e.currentTarget.src = "/placeholder-user.jpg"; }}
+                  />
               ) : (
-                <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4" />
-                </div>
+                  <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
               )}
               <span className="text-sm text-gray-300 truncate max-w-[100px]">{username || "User"}</span>
               <div className="relative ml-auto">
@@ -321,22 +374,22 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                   <Settings className="w-4 h-4" />
                 </Button>
                 {showDropdown && (
-                  <div className="absolute right-0 bottom-12 w-32 bg-gray-900 border border-gray-700 rounded shadow-lg z-50">
-                    <div className="flex flex-col gap-1 p-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Version</span>
-                        <Badge variant="secondary" className="ml-2" style={{background: 'linear-gradient(90deg, #d4d4d4 0%, #b0b0b0 100%)', color: '#222', border: '1px solid #bbb'}}>
-                          {process.env.NEXT_PUBLIC_VERSION}
-                        </Badge>
+                    <div className="absolute right-0 bottom-12 w-32 bg-gray-900 border border-gray-700 rounded shadow-lg z-50">
+                      <div className="flex flex-col gap-1 p-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400">Version</span>
+                          <Badge variant="secondary" className="ml-2" style={{background: 'linear-gradient(90deg, #d4d4d4 0%, #b0b0b0 100%)', color: '#222', border: '1px solid #bbb'}}>
+                            {process.env.NEXT_PUBLIC_VERSION}
+                          </Badge>
+                        </div>
                       </div>
+                      <button
+                          className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-800"
+                          onClick={handleLogout}
+                      >
+                        Log out
+                      </button>
                     </div>
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-800"
-                      onClick={handleLogout}
-                    >
-                      Log out
-                    </button>
-                  </div>
                 )}
               </div>
             </div>
@@ -344,12 +397,12 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
 
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-auto">{children}</div>
+            <div className="flex-1 overflow-auto pt-0 md:pt-0">{children}</div>
           </div>
         </div>
 
         {/* Bottom Player Bar */}
-        <div className="h-20 bg-[#181818] border-t border-gray-800 px-4 flex items-center justify-between">
+        <div className="hidden md:flex h-20 bg-[#181818] border-t border-gray-800 px-4 items-center justify-between">
           {/* Currently Playing */}
           <div className="flex items-center gap-3 w-1/4">
             <div className="w-12 h-12 bg-gray-700 rounded flex items-center justify-center overflow-hidden">
@@ -445,6 +498,81 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
             <Slider value={volume} onValueChange={handleVolumeSliderChange} max={100} step={1} className="w-24" />
           </div>
         </div>
+
+        {/* Mobile Player - Only visible on mobile devices */}
+        <div className="block md:hidden fixed bottom-0 left-0 right-0 bg-gradient-to-b from-[#181818] to-[#121212] border-t border-gray-800 px-2 pt-1.5 pb-2 z-50">
+          {/* Mobile Track Info */}
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-gray-700 rounded-md flex items-center justify-center overflow-hidden">
+              {currentTrackInfo?.albumCover ? (
+                <img
+                  src={currentTrackInfo.albumCover || "/placeholder.svg"}
+                  alt={currentTrackInfo.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none"
+                    if (e.currentTarget.nextElementSibling) e.currentTarget.nextElementSibling.style.display = "flex"
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center ${currentTrackInfo?.albumCover ? "hidden" : ""}`}>
+                <Music className="w-4 h-4 text-gray-500" />
+              </div>
+            </div>
+            <div className="ml-2 flex-1 min-w-0">
+              <p className="text-xs font-medium text-white truncate">{currentTrack}</p>
+              <p className="text-[10px] text-gray-400 truncate">{currentTrackInfo?.artist || "Unknown Artist"}</p>
+            </div>
+            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white ml-2 p-0 h-7 w-7">
+              <Heart className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Mobile Progress Bar */}
+          <div className="mt-1.5">
+            <div
+              ref={progressBarRef}
+              className="h-1 bg-gray-700 rounded-full overflow-hidden cursor-pointer relative"
+              onMouseDown={handleProgressMouseDown}
+            >
+              <div
+                className="h-full bg-green-500 rounded-full"
+                style={{ width: `${((isDragging && dragTime !== null ? dragTime : currentTime) / duration) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-0.5">
+              <span className="text-[9px] text-gray-500">{formatTime(isDragging && dragTime !== null ? dragTime : currentTime)}</span>
+              <span className="text-[9px] text-gray-500">{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          {/* Mobile Controls */}
+          <div className="flex items-center justify-center gap-5 mt-1.5">
+            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white p-0 h-8 w-8">
+              <SkipBack className="w-5 h-5" />
+            </Button>
+            <Button
+              onClick={isPlaying ? handlePause : handleResume}
+              disabled={!videoId}
+              className="w-9 h-9 bg-white hover:bg-gray-200 text-black rounded-full flex items-center justify-center"
+            >
+              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            </Button>
+            <Button
+              onClick={handleSkip}
+              disabled={queue.length <= 1}
+              variant="ghost"
+              size="sm"
+              className="text-gray-400 hover:text-white p-0 h-8 w-8"
+            >
+              <SkipForward className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile player spacer - prevents content from being hidden behind fixed player */}
+        <div className="block md:hidden h-28"></div>
       </div>
   )
 }
+
