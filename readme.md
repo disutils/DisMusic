@@ -85,10 +85,7 @@ We welcome contributions from the community! Please read our [Contributing Guide
 
 ## 📝 License
 
-- License is pending.
-
-[//]: # (This project is licensed under the MIT License - see the [LICENSE]&#40;LICENSE&#41; file for details.)
-
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0) - see the [LICENSE](LICENSE) file for details.
 ---
 
 ## 👥 Team
@@ -156,6 +153,6 @@ If you encounter any issues or have questions:
 
 **Made with 🎵 by the Disutils Team**
 
-[⭐ Star this repo](https://github.com/disutils-team/dismusic) • [🐛 Report Bug](https://github.com/disutils-team/dismusic/issues) • [💡 Request Feature](https://github.com/disutils-team/dismusic/issues)
+[⭐ Star this repo](https://github.com/disutils/dismusic) • [🐛 Report Bug](https://github.com/disutils/dismusic/issues) • [💡 Request Feature](https://github.com/disutils/dismusic/issues)
 
 </div>
