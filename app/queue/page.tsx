@@ -17,7 +17,10 @@ import {
   Heart,
   Music,
   MoreHorizontal,
+  SkipForward,
+  Trash2,
 } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useMusic } from "../context/MusicContext"
 
 // Helper function to safely get track information
@@ -78,7 +81,7 @@ export default function QueuePage() {
   const [queuePage, setQueuePage] = useState(0)
   const PAGE_SIZE = 8
 
-  const { queue, isPlaying, loading, error, handlePlay, handlePause, handleResume, setQueue } = useMusic()
+  const { queue, isPlaying, loading, error, handlePlay, handlePause, handleResume, setQueue, isFavorited, toggleFavorite, socket } = useMusic()
 
   const totalPages = Math.ceil(queue.length / PAGE_SIZE)
   const pagedQueue = queue.slice(queuePage * PAGE_SIZE, (queuePage + 1) * PAGE_SIZE)
@@ -86,6 +89,34 @@ export default function QueuePage() {
   // Update the currentTrack assignment
   const currentTrack = queue.length > 0 ? getTrackInfo(queue[0]).title : "No track selected"
   const currentTrackInfo = queue.length > 0 ? getTrackInfo(queue[0]) : null
+
+  const handlePlayNext = (index: number) => {
+    const realIndex = index + queuePage * PAGE_SIZE
+    if (realIndex <= 0 || realIndex >= queue.length) return
+
+    console.log('handlePlayNext called', { realIndex })
+    const track = queue[realIndex]
+    socket?.emit("moveTrack", realIndex, 1)
+
+    // Update local state optimistically
+    const newQueue = [...queue]
+    const [removedTrack] = newQueue.splice(realIndex, 1)
+    newQueue.splice(1, 0, removedTrack)
+    setQueue(newQueue)
+  }
+
+  const handleRemoveFromQueue = (index: number) => {
+    const realIndex = index + queuePage * PAGE_SIZE
+    if (realIndex <= 0 || realIndex >= queue.length) return
+
+    console.log('handleRemoveFromQueue called', { realIndex })
+    socket?.emit("remove", realIndex)
+
+    // Update local state optimistically
+    const newQueue = [...queue]
+    newQueue.splice(realIndex, 1)
+    setQueue(newQueue)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -109,7 +140,6 @@ export default function QueuePage() {
                     onChange={(e) => setQuery(e.target.value)}
                     className="pl-9 md:pl-12 h-10 md:h-12 bg-[#2a2a2a] border-gray-700 text-white placeholder:text-gray-400 text-sm md:text-lg"
                 />
-                {loading && <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 md:w-5 h-4 md:h-5 animate-spin" />}
               </div>
               <Button type="submit" disabled={loading || !query} className="h-10 md:h-12 px-3 md:px-6 bg-green-600 hover:bg-green-700 text-white">
                 {loading ? <Loader2 className="w-4 md:w-5 h-4 md:h-5 animate-spin" /> : <Play className="w-4 md:w-5 h-4 md:h-5" />}
@@ -169,8 +199,21 @@ export default function QueuePage() {
                     >
                       {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white w-9 h-9 md:w-auto md:h-auto p-0 md:p-2">
-                      <Heart className="w-4 h-4" />
+                    <Button
+                        onClick={() => currentTrackInfo && toggleFavorite({
+                            name: currentTrackInfo.title,
+                            artist: currentTrackInfo.artist,
+                            albumCover: currentTrackInfo.albumCover,
+                            duration: currentTrackInfo.duration
+                        })}
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-400 hover:text-white w-9 h-9 md:w-auto md:h-auto p-0 md:p-2"
+                    >
+                      <Heart className={`w-4 h-4 ${currentTrackInfo && isFavorited({
+                          name: currentTrackInfo.title,
+                          artist: currentTrackInfo.artist
+                      }) ? 'fill-current' : ''}`} />
                     </Button>
                   </div>
                 </div>
@@ -239,15 +282,55 @@ export default function QueuePage() {
                           <p className={`font-medium text-sm truncate ${i + queuePage * PAGE_SIZE === 0 ? "text-green-400" : "text-white"}`}>
                             {trackInfo.title}
                           </p>
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-2">
                             {i + queuePage * PAGE_SIZE === 0 && isPlaying ? (
-                              <div className="w-3 h-3 flex items-center justify-center mr-2">
+                              <div className="w-3 h-3 flex items-center justify-center">
                                 <div className="w-0.5 h-2 bg-green-500 animate-pulse mr-px"></div>
                                 <div className="w-0.5 h-1.5 bg-green-500 animate-pulse mr-px"></div>
                                 <div className="w-0.5 h-2.5 bg-green-500 animate-pulse"></div>
                               </div>
                             ) : null}
-                            <span className="text-xs text-gray-400 ml-1 flex-shrink-0">{duration}</span>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{duration}</span>
+                            {i + queuePage * PAGE_SIZE > 0 && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-[#1a1a1a] border border-gray-800 rounded-lg shadow-lg">
+                                  <DropdownMenuItem
+                                      onClick={() => toggleFavorite({
+                                        name: trackInfo.title,
+                                        artist: trackInfo.artist,
+                                        albumCover: trackInfo.albumCover,
+                                        duration: trackInfo.duration
+                                      })}
+                                      className="cursor-pointer flex items-center gap-2 p-2 text-sm text-white hover:bg-[#2a2a2a] rounded-lg"
+                                  >
+                                    <Heart className={`w-4 h-4 ${isFavorited({
+                                      name: trackInfo.title,
+                                      artist: trackInfo.artist
+                                    }) ? 'fill-current' : ''}`} />
+                                    {isFavorited({name: trackInfo.title, artist: trackInfo.artist}) ? 'Remove from Favorites' : 'Add to Favorites'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                      onClick={() => handlePlayNext(i)}
+                                      className="cursor-pointer flex items-center gap-2 p-2 text-sm text-white hover:bg-[#2a2a2a] rounded-lg"
+                                  >
+                                    <Play className="w-4 h-4" />
+                                    Play Next
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                      onClick={() => handleRemoveFromQueue(i)}
+                                      className="cursor-pointer flex items-center gap-2 p-2 text-sm text-white hover:bg-[#2a2a2a] rounded-lg"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Remove from Queue
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                         </div>
                         <p className="text-xs text-gray-400 truncate">{trackInfo.artist}</p>
@@ -295,9 +378,46 @@ export default function QueuePage() {
                     <div className="col-span-4 hidden md:flex items-center text-gray-400">{trackInfo.artist}</div>
                     <div className="col-span-2 hidden md:flex items-center justify-between">
                       <span className="text-gray-400">{duration}</span>
-                      <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
+                      {i + queuePage * PAGE_SIZE > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-[#1a1a1a] border border-gray-800 rounded-lg shadow-lg">
+                            <DropdownMenuItem
+                                onClick={() => toggleFavorite({
+                                  name: trackInfo.title,
+                                  artist: trackInfo.artist,
+                                  albumCover: trackInfo.albumCover,
+                                  duration: trackInfo.duration
+                                })}
+                                className="cursor-pointer flex items-center gap-2 p-2 text-sm text-white hover:bg-[#2a2a2a] rounded-lg"
+                            >
+                              <Heart className={`w-4 h-4 ${isFavorited({
+                                name: trackInfo.title,
+                                artist: trackInfo.artist
+                              }) ? 'fill-current' : ''}`} />
+                              {isFavorited({name: trackInfo.title, artist: trackInfo.artist}) ? 'Remove from Favorites' : 'Add to Favorites'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => handlePlayNext(i)}
+                                className="cursor-pointer flex items-center gap-2 p-2 text-sm text-white hover:bg-[#2a2a2a] rounded-lg"
+                            >
+                              <Play className="w-4 h-4" />
+                              Play Next
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => handleRemoveFromQueue(i)}
+                                className="cursor-pointer flex items-center gap-2 p-2 text-sm text-white hover:bg-[#2a2a2a] rounded-lg"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Remove from Queue
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
               )
