@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useRef, useEffect } from "react"
 import io, { type Socket } from "socket.io-client"
+import { Heart, ListMusic, QueueList } from "lucide-react"
 
 declare global {
   interface Window {
@@ -31,6 +32,12 @@ interface MusicContextType {
   setCurrentTime: (time: number) => void
   username?: string
   userpfpurl?: string
+  favorites: any[]
+  isFavorited: (track: any) => boolean
+  toggleFavorite: (track: any) => Promise<void>
+  currentPath: string
+  setCurrentPath: (path: string) => void
+  socket: Socket | null
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined)
@@ -47,11 +54,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("")
   const [username, setUsername] = useState<string | undefined>(undefined)
   const [userpfpurl, setUserpfpurl] = useState<string | undefined>(undefined)
-
+  const [favorites, setFavorites] = useState<any[]>([])
+  const [currentPath, setCurrentPath] = useState<string>("queue")
+  const Cookies = require("js-cookie")
   const playerRef = useRef<HTMLDivElement>(null)
   const socketRef = useRef<Socket | null>(null)
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://musicsocket.distools.dev";
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://musicsocket.distools.dev"
 
   // Load YouTube IFrame API
   useEffect(() => {
@@ -195,6 +204,67 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       .catch((err) => { console.error("[MusicContext] Error fetching user info:", err) })
   }, [])
 
+  // Fetch favorites on initial load
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      try {
+        const token = Cookies.get("dismusic_session");
+        if (!token) return;
+
+        const res = await fetch(`${BACKEND_URL}/api/user/favorites`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (data.favorites) {
+          setFavorites(data.favorites);
+        }
+      } catch (err) {
+        console.error("Failed to fetch favorites:", err);
+      }
+    };
+    fetchFavorites();
+  }, []);
+
+  const isFavorited = (track: any) => {
+    return favorites.some(f =>
+      (f.name === track.name && f.artist === track.artist) ||
+      (f.youtubeUrl && f.youtubeUrl === track.youtubeUrl) ||
+      (f.appleMusicUrl && f.appleMusicUrl === track.appleMusicUrl)
+    );
+  };
+
+  const toggleFavorite = async (track: any) => {
+    try {
+      const token = Cookies.get("dismusic_session");
+      console.log("[FAVORITES DEBUG] Token:", token);
+      if (!token) {
+        setError("Please log in to favorite tracks");
+        return;
+      }
+
+      console.log("[FAVORITES DEBUG] Toggling favorite for track:", track);
+      const res = await fetch(`${BACKEND_URL}/api/user/favorites/toggle`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ track }),
+      });
+
+      const data = await res.json();
+      console.log("[FAVORITES DEBUG] Toggle response:", data);
+      if (data.favorites) {
+        setFavorites(data.favorites);
+      }
+    } catch (err) {
+      console.error("Failed to toggle favorite:", err);
+      setError("Failed to update favorites");
+    }
+  };
+
   const handlePlay = (query: string) => {
     console.log('handlePlay called', { query, videoId, socket: socketRef.current });
     setError("")
@@ -231,31 +301,37 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-      <MusicContext.Provider
-          value={{
-            videoId,
-            ytReady,
-            queue,
-            isPlaying,
-            volume,
-            currentTime,
-            duration,
-            loading,
-            error,
-            handlePlay,
-            handlePause,
-            handleResume,
-            handleSkip,
-            handleVolumeChange,
-            setQueue,
-            setCurrentTime,
-            username,
-            userpfpurl,
-          }}
-      >
-        {children}
-        <div ref={playerRef} className="hidden" />
-      </MusicContext.Provider>
+    <MusicContext.Provider
+      value={{
+        videoId,
+        ytReady,
+        queue,
+        isPlaying,
+        volume,
+        currentTime,
+        duration,
+        loading,
+        error,
+        handlePlay,
+        handlePause,
+        handleResume,
+        handleSkip,
+        handleVolumeChange,
+        setQueue,
+        setCurrentTime,
+        username,
+        userpfpurl,
+        favorites,
+        isFavorited,
+        toggleFavorite,
+        currentPath,
+        setCurrentPath,
+        socket: socketRef.current,
+      }}
+    >
+      {children}
+      <div ref={playerRef} className="hidden" />
+    </MusicContext.Provider>
   )
 }
 
