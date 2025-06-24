@@ -155,7 +155,7 @@ If you encounter any issues or have questions:
 
 ---
 
-## 📊 Stats (Repo not public yet)
+## 📊 Stats
 
 ![Alt](https://repobeats.axiom.co/api/embed/64c3d10592afd8002a3cd7ea425c184b1acfd86a.svg "Repobeats analytics image")
 
