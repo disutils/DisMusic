@@ -157,6 +157,9 @@ If you encounter any issues or have questions:
 
 ## 📊 Stats (Repo not public yet)
 
+![Alt](https://repobeats.axiom.co/api/embed/64c3d10592afd8002a3cd7ea425c184b1acfd86a.svg "Repobeats analytics image")
+
+
 ![GitHub stars](https://img.shields.io/github/stars/disutils/DisMusic?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/disutils/DisMusic?style=social)
 ![GitHub issues](https://img.shields.io/github/issues/disutils/DisMusic)
