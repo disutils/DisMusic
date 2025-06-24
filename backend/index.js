@@ -393,6 +393,52 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("playNext", async (index) => {
+        const queue = userQueues[socket.id] || [];
+        if (index > 0 && index < queue.length) {
+            // Move the selected track to the position after current track
+            const track = queue.splice(index, 1)[0];
+            queue.splice(1, 0, track);
+            userQueues[socket.id] = queue;
+            emitQueueUpdate(socket);
+        }
+    });
+
+    socket.on("removeFromQueue", (index) => {
+        const queue = userQueues[socket.id] || [];
+        if (index >= 0 && index < queue.length) {
+            // Don't allow removing currently playing track (index 0)
+            if (index === 0) return;
+            queue.splice(index, 1);
+            userQueues[socket.id] = queue;
+            emitQueueUpdate(socket);
+        }
+    });
+
+    socket.on("moveTrack", async (fromIndex, toIndex) => {
+        console.log("[SOCKET] moveTrack event received", { fromIndex, toIndex });
+        const queue = userQueues[socket.id] || [];
+        if (fromIndex > 0 && fromIndex < queue.length && toIndex >= 0 && toIndex < queue.length) {
+            // Move the selected track to the target position
+            const track = queue.splice(fromIndex, 1)[0];
+            queue.splice(toIndex, 0, track);
+            userQueues[socket.id] = queue;
+            emitQueueUpdate(socket);
+        }
+    });
+
+    socket.on("remove", (index) => {
+        console.log("[SOCKET] remove event received", { index });
+        const queue = userQueues[socket.id] || [];
+        if (index >= 0 && index < queue.length) {
+            // Don't allow removing currently playing track (index 0)
+            if (index === 0) return;
+            queue.splice(index, 1);
+            userQueues[socket.id] = queue;
+            emitQueueUpdate(socket);
+        }
+    });
+
     socket.on("addToQueue", async ({ query }) => {
         try {
             // --- YOUTUBE PLAYLIST ---
@@ -1051,6 +1097,111 @@ app.post("/api/logout", async (req, res) => {
   } catch (err) {
     res.clearCookie("dismusic_session", { path: "/", httpOnly: false, sameSite: "lax" });
     res.status(500).json({ error: "Failed to log out" });
+  }
+});
+
+// --- FAVORITES API: Manage user's favorite tracks ---
+
+// GET favorites for the user
+app.get("/api/user/favorites", async (req, res) => {
+  const auth = req.headers["authorization"];
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+  }
+  const sessionToken = auth.replace("Bearer ", "");
+  try {
+    const user = await getUserBySessionToken(sessionToken);
+    if (!user) return res.status(401).json({ error: "Invalid session token" });
+
+    const pool = global.pgPool;
+    // Get favorites from user_favorites table
+    const favoritesRes = await pool.query(
+      'SELECT tracks FROM user_favorites WHERE userid = $1',
+      [user.userid]
+    );
+
+    // If no favorites exist yet, create an empty entry
+    if (favoritesRes.rows.length === 0) {
+      await pool.query(
+        'INSERT INTO user_favorites (userid, tracks) VALUES ($1, $2)',
+        [user.userid, '[]']
+      );
+      return res.json({ favorites: [] });
+    }
+
+    res.json({ favorites: favoritesRes.rows[0].tracks || [] });
+  } catch (err) {
+    console.error("[GET FAVORITES ERROR]", err);
+    res.status(500).json({ error: "Failed to fetch favorites" });
+  }
+});
+
+// Toggle favorite track (add/remove)
+app.post("/api/user/favorites/toggle", async (req, res) => {
+  const auth = req.headers["authorization"];
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+  }
+  const sessionToken = auth.replace("Bearer ", "");
+  const { track } = req.body;
+  if (!track) {
+    return res.status(400).json({ error: "Missing track data" });
+  }
+
+  try {
+    const user = await getUserBySessionToken(sessionToken);
+    if (!user) return res.status(401).json({ error: "Invalid session token" });
+
+    const pool = global.pgPool;
+    // Get current favorites
+    let favoritesRes = await pool.query(
+      'SELECT tracks FROM user_favorites WHERE userid = $1',
+      [user.userid]
+    );
+
+    let favorites = [];
+    if (favoritesRes.rows.length === 0) {
+      // Create new favorites entry if it doesn't exist
+      await pool.query(
+        'INSERT INTO user_favorites (userid, tracks) VALUES ($1, $2)',
+        [user.userid, '[]']
+      );
+    } else {
+      favorites = favoritesRes.rows[0].tracks || [];
+    }
+
+    // Check if track already exists in favorites
+    const trackExists = favorites.some(t =>
+      (t.name === track.name && t.artist === track.artist) ||
+      (t.youtubeUrl && t.youtubeUrl === track.youtubeUrl) ||
+      (t.appleMusicUrl && t.appleMusicUrl === track.appleMusicUrl)
+    );
+
+    if (trackExists) {
+      // Remove track
+      favorites = favorites.filter(t =>
+        !(t.name === track.name && t.artist === track.artist) &&
+        !(t.youtubeUrl && t.youtubeUrl === track.youtubeUrl) &&
+        !(t.appleMusicUrl && t.appleMusicUrl === track.appleMusicUrl)
+      );
+    } else {
+      // Add track
+      favorites.push({
+        ...track,
+        addedAt: new Date().toISOString()
+      });
+    }
+
+    // Update favorites in database
+    await pool.query(
+      'UPDATE user_favorites SET tracks = $1, updated_at = NOW() WHERE userid = $2',
+      [JSON.stringify(favorites), user.userid]
+    );
+
+    res.json({ favorites, added: !trackExists });
+  } catch (err) {
+    console.error("[TOGGLE FAVORITE ERROR]", err);
+    res.status(500).json({ error: "Failed to toggle favorite" });
   }
 });
 
