@@ -9,6 +9,7 @@ import Cookies from "js-cookie"
 import { useMusic } from "../context/MusicContext"
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/use-toast"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -22,6 +23,8 @@ export default function PlaylistsPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newPlaylistName, setNewPlaylistName] = useState("")
   const [newPlaylistTracks, setNewPlaylistTracks] = useState("")
+  const [createError, setCreateError] = useState("");
+  const { toast } = useToast();
 
   // On mount, get session token and fetch playlists from DB
   useEffect(() => {
@@ -102,32 +105,123 @@ export default function PlaylistsPage() {
       })
   }, [playlists, sessionToken, loaded, didUserEdit])
 
+  // Validate if URL is a supported playlist
+  const isValidPlaylistUrl = (url: string): boolean => {
+    const supportedPatterns = [
+      /^https:\/\/open\.spotify\.com\/playlist\//,
+      /^https:\/\/(?:www\.)?youtube\.com\/playlist\?list=/,
+      /^https:\/\/(?:www\.)?music\.youtube\.com\/playlist\?list=/,
+      /^https:\/\/youtu\.be\/playlist\?list=/
+    ];
+
+    return supportedPatterns.some(pattern => pattern.test(url));
+  }
+
+  // Extract YouTube playlist ID from URL
+  const extractYouTubePlaylistId = (url: string): string | null => {
+    const match = url.match(/[?&]list=([\w-]+)/);
+    return match ? match[1] : null;
+  }
+
+  // Determine playlist source (spotify, youtube, youtube music)
+  const getPlaylistSource = (url: string): string => {
+    if (url.includes('open.spotify.com')) return 'spotify';
+    if (url.includes('music.youtube.com')) return 'youtube_music';
+    return 'youtube';
+  }
+
   const handleAddPlaylist = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!playlistUrl.startsWith("https://open.spotify.com/playlist/")) return
-    let playlistInfo = { url: playlistUrl, name: playlistUrl, covers: [] as string[] };
+    e.preventDefault();
+    if (!isValidPlaylistUrl(playlistUrl)) {
+      toast({ title: "Invalid playlist URL format", description: "Please enter a valid Spotify or YouTube playlist link", variant: "destructive" });
+      return;
+    }
+
+    const playlistSource = getPlaylistSource(playlistUrl);
+    let playlistInfo = {
+      url: playlistUrl,
+      name: playlistUrl,
+      covers: [] as string[],
+      source: playlistSource
+    };
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/spotify`, {
+      // Choose the right API endpoint based on source
+      let endpoint;
+      if (playlistSource === 'spotify') {
+        endpoint = `${BACKEND_URL}/api/spotify`;
+      } else {
+        // Both YouTube and YouTube Music playlists use the same endpoint
+        endpoint = `${BACKEND_URL}/api/youtube`;
+      }
+
+      console.log(`[PlaylistsPage] Fetching playlist info from ${endpoint} for URL: ${playlistUrl}`);
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: playlistUrl })
       });
+
       if (res.ok) {
         const data = await res.json();
-        playlistInfo.name = data.name || playlistUrl;
+        console.log(`[PlaylistsPage] Response data from ${playlistSource}:`, data);
+
+        // Handle playlist name
+        playlistInfo.name = data.name || data.title || playlistUrl;
+
+        // Handle playlist covers based on source
         if (data.tracks && Array.isArray(data.tracks)) {
-          playlistInfo.covers = data.tracks.slice(0, 4).map((t: any) => {
-            return t.albumCover || t.album?.images?.[0]?.url;
-          }).filter(Boolean);
+          if (playlistSource === 'spotify') {
+            // Handle Spotify format
+            playlistInfo.covers = data.tracks.slice(0, 4)
+              .map((t: any) => t.albumCover || t.album?.images?.[0]?.url)
+              .filter(Boolean);
+          } else {
+            // Handle YouTube/YouTube Music format
+            playlistInfo.covers = data.tracks.slice(0, 4)
+              .map((t: any) => t.thumbnail || t.albumCover)
+              .filter(Boolean);
+          }
+        }
+
+        // If we still don't have covers, check if playlist has its own thumbnail
+        if ((playlistInfo.covers.length === 0 || playlistInfo.covers.every(cover => !cover)) && data.thumbnail) {
+          playlistInfo.covers = [data.thumbnail, data.thumbnail, data.thumbnail, data.thumbnail];
+        }
+
+        console.log(`[PlaylistsPage] Processed playlist info:`, playlistInfo);
+      } else {
+        console.error(`[PlaylistsPage] Error fetching from ${endpoint}, status: ${res.status}`);
+        toast({
+          title: "Could not fetch playlist",
+          description: `Failed to load the ${playlistSource} playlist. Please try again.`,
+          variant: "destructive"
+        });
+
+        // Still add the playlist with just the URL and extracted ID name
+        const listId = extractYouTubePlaylistId(playlistUrl);
+        if (playlistSource !== 'spotify' && listId) {
+          playlistInfo.name = playlistSource === 'youtube_music'
+            ? `YouTube Music Playlist: ${listId}`
+            : `YouTube Playlist: ${listId}`;
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error("[PlaylistsPage] Error fetching playlist info:", err);
+      toast({
+        title: "Error loading playlist",
+        description: "There was a problem processing your request.",
+        variant: "destructive"
+      });
+    }
+
     setPlaylists((prev) => [
       playlistInfo,
       ...prev.filter((p) => p.url !== playlistUrl)
-    ])
-    setDidUserEdit(true)
-    setPlaylistUrl("")
+    ]);
+    setDidUserEdit(true);
+    setPlaylistUrl("");
   }
 
   // Delete playlist handler
@@ -170,15 +264,31 @@ export default function PlaylistsPage() {
     setShowCreateDialog(false)
     setNewPlaylistName("")
     setNewPlaylistTracks("")
+    setCreateError("");
   }
 
   const handleCreatePlaylist = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPlaylistName.trim() || !sessionToken) return;
+    setCreateError("");
+    if (!newPlaylistName.trim() || !sessionToken) {
+      toast({ title: "Playlist name is required.", variant: "destructive" });
+      return;
+    }
     const tracks = newPlaylistTracks
       .split(/\n|,/) // split by new line or comma
       .map(t => t.trim())
       .filter(Boolean);
+    if (tracks.length === 0) {
+      toast({ title: "Please enter at least one track URL.", variant: "destructive" });
+      return;
+    }
+    // Only allow valid Spotify or YouTube track URLs
+    const validTrackRegex = /^(https:\/\/(open\.spotify\.com\/track\/|music\.youtube\.com\/watch\?v=|www\.music\.youtube\.com\/watch\?v=|youtube\.com\/watch\?v=|www\.youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+)$/;
+    const invalidTrack = tracks.find(t => !validTrackRegex.test(t));
+    if (invalidTrack) {
+      toast({ title: "One or more track URLs are invalid.", description: `Invalid: ${invalidTrack}`, variant: "destructive" });
+      return;
+    }
     try {
       const res = await fetch(`${BACKEND_URL}/api/user/playlist/create`, {
         method: "POST",
@@ -199,9 +309,13 @@ export default function PlaylistsPage() {
         setShowCreateDialog(false);
         setNewPlaylistName("");
         setNewPlaylistTracks("");
+        setCreateError("");
+        toast({ title: "Playlist created!", variant: "success" });
+      } else {
+        toast({ title: "Failed to create playlist. Please try again.", variant: "destructive" });
       }
     } catch (err) {
-      // Optionally show error toast
+      toast({ title: "Error creating playlist.", description: "Please check your input and try again.", variant: "destructive" });
       console.error("[PlaylistsPage] Error creating playlist:", err);
     }
   }
@@ -221,7 +335,7 @@ export default function PlaylistsPage() {
             type="text"
             value={playlistUrl}
             onChange={e => setPlaylistUrl(e.target.value)}
-            placeholder="Paste Spotify playlist URL here"
+            placeholder="Paste Spotify, YouTube, or YouTube Music playlist URL here"
             className="flex-1 px-4 py-2 rounded-lg bg-[#232323] text-white border border-gray-700 focus:ring-2 focus:ring-green-600 transition-all"
           />
           <Button type="submit" className="bg-green-600 hover:bg-green-700 shadow-md flex items-center gap-2">
@@ -286,14 +400,14 @@ export default function PlaylistsPage() {
                   value={newPlaylistName}
                   onChange={e => setNewPlaylistName(e.target.value)}
                   placeholder="Playlist name"
-                  className="w-full"
+                  className="w-full bg-[#181818] text-white placeholder-gray-400 border border-gray-700 focus:ring-2 focus:ring-green-600"
                   autoFocus
                 />
                 <Textarea
                   value={newPlaylistTracks}
                   onChange={e => setNewPlaylistTracks(e.target.value)}
                   placeholder="Enter track URLs, one per line or comma separated"
-                  className="w-full min-h-[100px]"
+                  className="w-full min-h-[100px] bg-[#181818] text-white placeholder-gray-400 border border-gray-700 focus:ring-2 focus:ring-green-600"
                 />
               </div>
               <DialogFooter className="mt-6">
