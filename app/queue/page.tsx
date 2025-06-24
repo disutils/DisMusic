@@ -97,33 +97,31 @@ export default function QueuePage() {
   return (
       <div className="h-full overflow-auto">
         {/* Header */}
-        <header className="p-6 border-b border-gray-800 bg-[#121212]">
-          <form onSubmit={handleSubmit} className="flex items-center gap-4">
-            <Button type="button" variant="ghost" size="sm" className="text-gray-400">
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            <div className="flex-1 max-w-md">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <div className="p-6">
+          <div className="max-w-2xl mb-8">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <Input
                     type="text"
-                    placeholder="Search tracks..."
+                    placeholder="Insert Spotify URL or YT URL, or search for a track..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="pl-10 bg-[#2a2a2a] border-gray-700 text-white placeholder:text-gray-400"
+                    className="pl-12 h-12 bg-[#2a2a2a] border-gray-700 text-white placeholder:text-gray-400 text-lg"
                 />
+                {loading && <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 animate-spin" />}
               </div>
-            </div>
-            <Button type="submit" disabled={loading || !query} className="bg-green-600 hover:bg-green-700 text-white">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            </Button>
-          </form>
-          {error && (
-              <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
-                <p className="text-red-400 text-sm">{error}</p>
-              </div>
-          )}
-        </header>
+              <Button type="submit" disabled={loading || !query} className="h-12 px-6 bg-green-600 hover:bg-green-700 text-white">
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
+              </Button>
+            </form>
+            {error && (
+                <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+            )}
+          </div>
+        </div>
 
         {/* Now Playing Section */}
         {queue.length > 0 && (
