@@ -63,6 +63,10 @@ The application uses the following Socket.IO events:
 - `queueUpdate` - Real-time queue synchronization
 - `playYouTube` - YouTube playback event
 - `queueEnded` - Queue completion notification
+- `moveTrack` - Move a track to a different position in the queue
+- `remove` - Remove a track from the queue
+- `playNext` - Move a track to play right after the current track
+- `removeFromQueue` - Remove a specific track from the queue
 
 ### API Endpoints
 
@@ -73,6 +77,17 @@ The application uses the following Socket.IO events:
 - `GET /api/stats` - User statistics (WIP)
 - `POST /auth/discord` - Discord OAuth callback
 - `POST /api/user/playlist/create` - Create a new in-house playlist for the user
+- `GET /api/user/playlists` - Get user's playlists
+- `POST /api/user/playlists` - Create/update user's playlists
+- `DELETE /api/user/playlists` - Delete a user's playlist
+- `GET /api/user/info` - Get user profile information
+- `POST /api/logout` - Logout and invalidate session
+- `GET /api/user/favorites` - Get user's favorite tracks
+- `POST /api/user/favorites/toggle` - Toggle a track as favorite
+- `POST /api/spotify` - Get Spotify track/playlist info
+- `POST /api/applemusic` - Get Apple Music track/playlist info
+- `POST /api/youtube` - Get YouTube playlist info
+- `GET /test` - Backend health check endpoint
 
 ---
 
