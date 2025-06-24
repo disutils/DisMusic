@@ -153,6 +153,6 @@ If you encounter any issues or have questions:
 
 **Made with 🎵 by the Disutils Team**
 
-[⭐ Star this repo](https://github.com/disutils/dismusic) • [🐛 Report Bug](https://github.com/disutils/dismusic/issues) • [💡 Request Feature](https://github.com/disutils/dismusic/issues)
+[⭐ Star this repo](https://github.com/disutils/DisMusic) • [🐛 Report Bug](https://github.com/disutils/DisMusic/issues) • [💡 Request Feature](https://github.com/disutils/DisMusic/issues)
 
 </div>
