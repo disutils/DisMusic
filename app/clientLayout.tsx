@@ -237,10 +237,10 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
         {/* Mobile Header - Only visible on mobile devices */}
         <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#121212] border-b border-gray-800">
           <Button
-            variant="ghost"
-            size="sm"
-            className="p-1 text-white"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              variant="ghost"
+              size="sm"
+              className="p-1 text-white"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </Button>
@@ -252,15 +252,15 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
         <div className="flex flex-1 overflow-hidden">
           {/* Mobile Sidebar Backdrop */}
           {mobileMenuOpen && (
-            <div
-              className="md:hidden fixed inset-0 bg-black bg-opacity-70 z-40"
-              onClick={() => setMobileMenuOpen(false)}
-            />
+              <div
+                  className="md:hidden fixed inset-0 bg-black bg-opacity-70 z-40"
+                  onClick={() => setMobileMenuOpen(false)}
+              />
           )}
 
           {/* Sidebar - Desktop: always visible, Mobile: conditionally visible */}
           <aside
-            className={`bg-[#121212] border-r border-gray-800 flex-col md:flex
+              className={`bg-[#121212] border-r border-gray-800 flex-col md:flex
                       fixed md:static inset-y-0 left-0 z-50 md:z-0 
                       transition-transform duration-300 ease-in-out
                       w-[260px] md:w-64
@@ -273,8 +273,8 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
 
             {/* Close button for mobile - Top right */}
             <button
-              onClick={() => setMobileMenuOpen(false)}
-              className="absolute top-3 right-3 text-gray-400 md:hidden"
+                onClick={() => setMobileMenuOpen(false)}
+                className="absolute top-3 right-3 text-gray-400 md:hidden"
             >
               <X className="h-6 w-6" />
             </button>
@@ -323,8 +323,24 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                         {item.label}
                       </Button>
                   ))}
+                  <Button
+                      variant="ghost"
+                      className={`w-full justify-start ${
+                          pathname === "/favorites"
+                              ? "bg-gray-800 text-white hover:bg-gray-700"
+                              : "text-gray-300 hover:text-white hover:bg-gray-800"
+                      }`}
+                      onClick={() => {
+                        router.push("/favorites");
+                        if (mobileMenuOpen) setMobileMenuOpen(false);
+                      }}
+                  >
+                    <Heart className="w-5 h-5 mr-3" />
+                    Favorites
+                  </Button>
                 </div>
               </div>
+
 
               <div className="mt-auto">
                 <Button
@@ -343,10 +359,10 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
                   Downloads
                 </Button>
                 <Button
-                  className="w-full justify-start bg-red-600 hover:bg-red-700 text-white"
-                  onClick={() => {
-                    if (mobileMenuOpen) setMobileMenuOpen(false);
-                  }}
+                    className="w-full justify-start bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => {
+                      if (mobileMenuOpen) setMobileMenuOpen(false);
+                    }}
                 >
                   <Headphones className="w-5 h-5 mr-3" />
                   Devices
@@ -505,15 +521,15 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
           <div className="flex items-center">
             <div className="w-10 h-10 bg-gray-700 rounded-md flex items-center justify-center overflow-hidden">
               {currentTrackInfo?.albumCover ? (
-                <img
-                  src={currentTrackInfo.albumCover || "/placeholder.svg"}
-                  alt={currentTrackInfo.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none"
-                    if (e.currentTarget.nextElementSibling) e.currentTarget.nextElementSibling.style.display = "flex"
-                  }}
-                />
+                  <img
+                      src={currentTrackInfo.albumCover || "/placeholder.svg"}
+                      alt={currentTrackInfo.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none"
+                        if (e.currentTarget.nextElementSibling) e.currentTarget.nextElementSibling.style.display = "flex"
+                      }}
+                  />
               ) : null}
               <div className={`w-full h-full flex items-center justify-center ${currentTrackInfo?.albumCover ? "hidden" : ""}`}>
                 <Music className="w-4 h-4 text-gray-500" />
@@ -531,13 +547,13 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
           {/* Mobile Progress Bar */}
           <div className="mt-1.5">
             <div
-              ref={progressBarRef}
-              className="h-1 bg-gray-700 rounded-full overflow-hidden cursor-pointer relative"
-              onMouseDown={handleProgressMouseDown}
+                ref={progressBarRef}
+                className="h-1 bg-gray-700 rounded-full overflow-hidden cursor-pointer relative"
+                onMouseDown={handleProgressMouseDown}
             >
               <div
-                className="h-full bg-green-500 rounded-full"
-                style={{ width: `${((isDragging && dragTime !== null ? dragTime : currentTime) / duration) * 100}%` }}
+                  className="h-full bg-green-500 rounded-full"
+                  style={{ width: `${((isDragging && dragTime !== null ? dragTime : currentTime) / duration) * 100}%` }}
               />
             </div>
             <div className="flex justify-between mt-0.5">
@@ -552,18 +568,18 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
               <SkipBack className="w-5 h-5" />
             </Button>
             <Button
-              onClick={isPlaying ? handlePause : handleResume}
-              disabled={!videoId}
-              className="w-9 h-9 bg-white hover:bg-gray-200 text-black rounded-full flex items-center justify-center"
+                onClick={isPlaying ? handlePause : handleResume}
+                disabled={!videoId}
+                className="w-9 h-9 bg-white hover:bg-gray-200 text-black rounded-full flex items-center justify-center"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
             </Button>
             <Button
-              onClick={handleSkip}
-              disabled={queue.length <= 1}
-              variant="ghost"
-              size="sm"
-              className="text-gray-400 hover:text-white p-0 h-8 w-8"
+                onClick={handleSkip}
+                disabled={queue.length <= 1}
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white p-0 h-8 w-8"
             >
               <SkipForward className="w-5 h-5" />
             </Button>
@@ -575,4 +591,3 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
       </div>
   )
 }
-
