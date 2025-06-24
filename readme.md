@@ -121,6 +121,8 @@ If you encounter any issues or have questions:
 - ✅ Discord OAuth
 - ✅ Real-time synchronization
 - ✅ Web interface
+- ✅ Mobile support (responsive design)
+
 
 ### Upcoming Features / WIP (1.3A)
 - 🔄 Inhouse playlist system! ✅ Implemented but buggy
