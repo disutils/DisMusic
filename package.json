@@ -1,7 +1,8 @@
 {
-  "name": "spotify-web-player",
-  "version": "0.1.0",
+  "name": "dismusic",
+  "version": "1.3A",
   "private": true,
+  "license": "GPL-3.0",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
