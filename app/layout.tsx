@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "DisMusic",
-  description: "Music player with queue management",
+  description: "A music player inspired by Spotube that allows you to play music from sources like YouTube, Spotify, and more.",
 }
 
 export default function RootLayout({
