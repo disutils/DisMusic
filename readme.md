@@ -127,21 +127,23 @@ If you encounter any issues or have questions:
 
 ## 🗺️ Roadmap
 
-### Current Version (1.2A)
+### Current Version (1.3)
 - ✅ Basic music streaming
 - ✅ Queue management
+- ✅ Inhouse playlist system! Implemented but buggy
 - ✅ Discord OAuth
 - ✅ Real-time synchronization
 - ✅ Web interface
+- ✅ Mobile support (responsive design)
 
 
-### Upcoming Features / WIP (1.3A)
-- ✅ Inhouse playlist system! Implemented but buggy
+### Upcoming Features / WIP (1.4A)
+-  Inhouse playlist system! Implemented but buggy
 - 🔄 Favorite tracks system
 - 🔄 Advanced playlist features
 - 🔄 Custom themes
-- ✅ Mobile support (responsive design)
-
+- 🔄 Alerts (Notis)
+- 🔄 Viewing playlist page
 
 ### Future Plans (v1.0)
 - 🔮 Offline mode
