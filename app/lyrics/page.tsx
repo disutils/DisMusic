@@ -1,76 +1,84 @@
-import { Card, CardContent } from "@/components/ui/card"
+import { Construction, Mic2, Music, MessageSquareText, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Play, Heart } from "lucide-react"
 
 export default function LyricsPage() {
   return (
-    <div className="p-6 h-full overflow-auto">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-6 mb-8">
-          <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-5xl">
-            🎵
+    <div className="p-6 h-full overflow-auto bg-[#1a1a1a]">
+      <div className="max-w-2xl mx-auto text-center mt-12">
+        {/* Animated Construction Header */}
+        <div className="relative mb-8">
+          <div className="absolute -left-4 top-0 animate-bounce">
+            <Construction className="w-8 h-8 text-purple-500 transform -rotate-12" />
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Blinding Lights</h2>
-            <p className="text-xl text-gray-400 mb-4">The Weeknd</p>
-            <div className="flex items-center gap-4">
-              <Button className="bg-green-600 hover:bg-green-700 rounded-full">
-                <Play className="w-4 h-4 mr-2" />
-                Play
-              </Button>
-              <Button variant="ghost" className="text-gray-400 hover:text-white">
-                <Heart className="w-4 h-4" />
-              </Button>
+          <div className="absolute -right-4 top-0 animate-bounce delay-100">
+            <Construction className="w-8 h-8 text-purple-500 transform rotate-12" />
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">
+            Lyrics Coming Soon!
+          </h1>
+        </div>
+
+        {/* Main Content with Animation */}
+        <div className="relative p-8 rounded-xl bg-[#232323] border border-gray-800 shadow-xl mb-8">
+          {/* Animated Microphones */}
+          <div className="absolute -left-3 top-1/2 transform -translate-y-1/2">
+            <Mic2 className="w-12 h-12 text-purple-500 animate-bounce" />
+          </div>
+          <div className="absolute -right-3 top-1/2 transform -translate-y-1/2">
+            <Music className="w-12 h-12 text-purple-500 animate-bounce delay-150" />
+          </div>
+
+          <div className="space-y-6">
+            <div className="flex justify-center">
+              <div className="relative w-24 h-24 mb-6">
+                <MessageSquareText className="w-full h-full text-purple-500 animate-pulse" />
+              </div>
+            </div>
+
+            <p className="text-xl text-gray-300 mb-6">
+              We're working on bringing you synchronized lyrics!
+            </p>
+
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-2 text-gray-400">
+                <FileText className="w-5 h-5 animate-wiggle" />
+                <span>Feature under development</span>
+              </div>
+
+              <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 animate-progress" />
+              </div>
             </div>
           </div>
         </div>
 
-        <Card className="bg-[#1a1a1a] border-gray-800">
-          <CardContent className="p-8">
-            <div className="space-y-6 text-white leading-relaxed">
-              <div className="space-y-2">
-                <p className="text-lg">Yeah</p>
-                <p className="text-lg">I've been tryna call</p>
-                <p className="text-lg">I've been on my own for long enough</p>
-                <p className="text-lg">Maybe you can show me how to love, maybe</p>
-              </div>
+        {/* Feature Preview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto mt-8">
+          <div className="p-6 rounded-lg bg-[#232323] border border-gray-800 transform hover:scale-105 transition-transform">
+            <MessageSquareText className="w-8 h-8 text-purple-500 mb-4 mx-auto" />
+            <h3 className="text-lg font-semibold text-white mb-2">Real-time Lyrics</h3>
+            <p className="text-gray-400 text-sm">Follow along with synchronized lyrics as your music plays</p>
+          </div>
+          <div className="p-6 rounded-lg bg-[#232323] border border-gray-800 transform hover:scale-105 transition-transform">
+            <FileText className="w-8 h-8 text-purple-500 mb-4 mx-auto" />
+            <h3 className="text-lg font-semibold text-white mb-2">Multiple Languages</h3>
+            <p className="text-gray-400 text-sm">View lyrics in different languages with translations</p>
+          </div>
+        </div>
 
-              <div className="space-y-2">
-                <p className="text-lg">I feel like I'm just missing something when you're gone</p>
-                <p className="text-lg">What if I'm never gonna find my way back home?</p>
-                <p className="text-lg">What if I'm never gonna see you again?</p>
-              </div>
-
-              <div className="space-y-2 bg-green-500/10 p-4 rounded-lg border-l-4 border-green-500">
-                <p className="text-lg font-semibold text-green-400">[Chorus]</p>
-                <p className="text-lg">I feel like I'm just missing something when you're gone</p>
-                <p className="text-lg">What if I'm never gonna find my way back home?</p>
-                <p className="text-lg">What if I'm never gonna see you again?</p>
-                <p className="text-lg">I said, ooh, I'm blinded by the lights</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-lg">No, I can't sleep until I feel your touch</p>
-                <p className="text-lg">I said, ooh, I'm drowning in the night</p>
-                <p className="text-lg">Oh, when I'm like this, you're the one I trust</p>
-                <p className="text-lg">I'm running out of time</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-lg">'Cause I can see the sun light up the sky</p>
-                <p className="text-lg">So I hit the road in overdrive, baby, oh</p>
-              </div>
-
-              <div className="space-y-2 bg-green-500/10 p-4 rounded-lg border-l-4 border-green-500">
-                <p className="text-lg font-semibold text-green-400">[Chorus]</p>
-                <p className="text-lg">The city's cold and empty (Oh)</p>
-                <p className="text-lg">No one's around to judge me (Oh)</p>
-                <p className="text-lg">I can't see clearly when you're gone</p>
-                <p className="text-lg">I said, ooh, I'm blinded by the lights</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Coming Soon Button */}
+        <div className="mt-12">
+          <Button
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 animate-pulse-slow"
+            disabled
+          >
+            <MessageSquareText className="w-4 h-4 mr-2" />
+            Coming Soon
+          </Button>
+          <p className="text-gray-500 text-sm mt-4">
+            We'll notify you when synchronized lyrics are ready!
+          </p>
+        </div>
       </div>
     </div>
   )
