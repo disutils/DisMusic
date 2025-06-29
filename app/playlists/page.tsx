@@ -291,7 +291,11 @@ export default function PlaylistsPage() {
     const validTrackRegex = /^(https:\/\/(open\.spotify\.com\/track\/|music\.youtube\.com\/watch\?v=|www\.music\.youtube\.com\/watch\?v=|youtube\.com\/watch\?v=|www\.youtube\.com\/watch\?v=|youtu\.be\/)[^\s]+)$/;
     const invalidTrack = tracks.find(t => !validTrackRegex.test(t));
     if (invalidTrack) {
-      toast({ title: "One or more track URLs are invalid.", description: `Invalid: ${invalidTrack}`, variant: "destructive" });
+      toast({
+        title: "One or more track URLs are invalid.",
+        description: `Invalid: ${invalidTrack}`,
+        variant: "destructive"
+      });
       return;
     }
     setIsCreating(true);
@@ -304,26 +308,72 @@ export default function PlaylistsPage() {
         },
         body: JSON.stringify({ name: newPlaylistName, tracks })
       });
-      if (res.ok) {
-        // Refetch playlists after creation
-        const playlistsRes = await fetch(`${BACKEND_URL}/api/user/playlists`, {
-          method: "GET",
-          headers: { "Authorization": `Bearer ${sessionToken}` }
-        });
-        const data = await playlistsRes.json();
-        if (data && Array.isArray(data.playlists)) setPlaylists(data.playlists);
-        setShowCreateDialog(false);
-        setNewPlaylistName("");
-        setNewPlaylistTracks("");
-        setCreateError("");
-        toast({ title: "Playlist created!", variant: "success" });
-      } else {
-        const text = await res.text();
-        console.error("[PlaylistsPage] Error creating playlist, server responded with:", text);
-        toast({ title: "Failed to create playlist. Please try again.", description: text, variant: "destructive" });
+
+      let errorMessage;
+      try {
+        const data = await res.json();
+        if (res.ok) {
+          // Refetch playlists after creation
+          const playlistsRes = await fetch(`${BACKEND_URL}/api/user/playlists`, {
+            method: "GET",
+            headers: { "Authorization": `Bearer ${sessionToken}` }
+          });
+          const playlistsData = await playlistsRes.json();
+          if (playlistsData && Array.isArray(playlistsData.playlists)) {
+            setPlaylists(playlistsData.playlists);
+          }
+          setShowCreateDialog(false);
+          setNewPlaylistName("");
+          setNewPlaylistTracks("");
+          setCreateError("");
+          toast({
+            title: "Playlist created!",
+            description: "Your playlist has been created successfully.",
+            variant: "success"
+          });
+          return;
+        }
+        errorMessage = data.error;
+      } catch (e) {
+        // If response isn't JSON, use text as error message
+        errorMessage = await res.text();
       }
+
+      // Handle specific error cases
+      if (typeof errorMessage === 'string') {
+        if (errorMessage.toLowerCase().includes('video unavailable')) {
+          toast({
+            title: "Some videos are unavailable",
+            description: "One or more YouTube videos in your playlist are unavailable, private, or have been removed. Please check the URLs and try again.",
+            variant: "destructive"
+          });
+        } else if (errorMessage.toLowerCase().includes('invalid session')) {
+          toast({
+            title: "Session expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error creating playlist",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Error creating playlist",
+          description: "An unknown error occurred. Please try again.",
+          variant: "destructive"
+        });
+      }
+      console.error("[PlaylistsPage] Error creating playlist:", errorMessage);
     } catch (err) {
-      toast({ title: "Error creating playlist.", description: "Please check your input and try again.", variant: "destructive" });
+      toast({
+        title: "Error creating playlist",
+        description: "There was a problem creating your playlist. Please check your track URLs and try again.",
+        variant: "destructive"
+      });
       console.error("[PlaylistsPage] Error creating playlist:", err);
     } finally {
       setIsCreating(false);
