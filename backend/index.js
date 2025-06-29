@@ -1055,6 +1055,34 @@ app.post("/api/user/playlist/create", async (req, res) => {
   }
 });
 
+
+app.get("/api/user/playlist/:id", async (req, res) => {
+    const auth = req.headers["authorization"];
+    if (!auth || !auth.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Missing or invalid Authorization header" });
+    }
+    const sessionToken = auth.replace("Bearer ", "");
+    const playlistId = req.params.id;
+    try {
+        const user = await getUserBySessionToken(sessionToken);
+        if (!user) return res.status(401).json({ error: "Invalid session token" });
+        const pool = global.pgPool;
+        const result = await pool.query(
+            'SELECT id, name, tracks, created_at FROM user_playlists WHERE id = $1 AND userid = $2',
+            [playlistId, user.userid]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: "Playlist not found" });
+        }
+        res.json(result.rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch playlist" });
+    }
+})
+
+
+
+
 // --- USER INFO API: GET user info by session token ---
 app.get("/api/user/info", async (req, res) => {
   const auth = req.headers["authorization"];
@@ -1210,6 +1238,94 @@ app.post("/api/client-logout-log", (req, res) => {
   const { message } = req.body;
   console.log("[CLIENT LOGOUT]", message);
   res.json({ ok: true });
+});
+
+// --- ADD TRACK TO PLAYLIST API: POST /api/user/playlist/:id/add-track ---
+app.post("/api/user/playlist/:id/add-track", async (req, res) => {
+  const auth = req.headers["authorization"];
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+  }
+  const sessionToken = auth.replace("Bearer ", "");
+  const playlistId = req.params.id;
+  const { trackUrl } = req.body;
+  if (!trackUrl || typeof trackUrl !== "string") {
+    return res.status(400).json({ error: "Missing or invalid trackUrl" });
+  }
+  try {
+    const user = await getUserBySessionToken(sessionToken);
+    if (!user) return res.status(401).json({ error: "Invalid session token" });
+    const pool = global.pgPool;
+    // Fetch the playlist and check ownership
+    const playlistRes = await pool.query(
+      'SELECT id, tracks FROM user_playlists WHERE id = $1 AND userid = $2',
+      [playlistId, user.userid]
+    );
+    if (playlistRes.rows.length === 0) {
+      return res.status(404).json({ error: "Playlist not found" });
+    }
+    let tracks = playlistRes.rows[0].tracks || [];
+    // Hydrate the new track
+    let hydratedTrack = null;
+    // YouTube
+    const ytVideoId = extractYouTubeVideoId(trackUrl);
+    if (ytVideoId) {
+      const result = await ytSearch({ videoId: ytVideoId });
+      if (result && result.title) {
+        hydratedTrack = {
+          name: result.title,
+          artists: [{ name: result.author.name }],
+          albumCover: result.thumbnail,
+          duration: result.seconds,
+          youtubeUrl: result.url
+        };
+      }
+    }
+    // Spotify
+    if (!hydratedTrack) {
+      const spotifyTrackId = extractSpotifyTrackId(trackUrl);
+      if (spotifyTrackId) {
+        try {
+          const trackRes = await spotifyApi.getTrack(spotifyTrackId);
+          const track = trackRes.body;
+          // Find YouTube URL for this track
+          const searchString = `${track.name} ${track.artists[0]?.name || ''}`;
+          const ytUrl = await findYouTubeUrl(searchString);
+          hydratedTrack = {
+            ...track,
+            youtubeUrl: ytUrl?.url || null
+          };
+        } catch (e) {
+          hydratedTrack = { name: trackUrl };
+        }
+      }
+    }
+    // Fallback: try to search YouTube by URL as string (for generic/unknown links)
+    if (!hydratedTrack) {
+      const ytResult = await findYouTubeUrl(trackUrl);
+      if (ytResult) {
+        hydratedTrack = {
+          name: trackUrl,
+          youtubeUrl: ytResult.url,
+          duration: ytResult.duration
+        };
+      }
+    }
+    // Fallback: just return url as name
+    if (!hydratedTrack) {
+      hydratedTrack = { name: trackUrl };
+    }
+    // Add the new track
+    tracks.push(hydratedTrack);
+    await pool.query(
+      'UPDATE user_playlists SET tracks = $1 WHERE id = $2',
+      [JSON.stringify(tracks), playlistId]
+    );
+    res.json({ success: true, track: hydratedTrack });
+  } catch (err) {
+    console.error("[BACKEND] Error in /api/user/playlist/:id/add-track POST:", err);
+    res.status(500).json({ error: "Failed to add track to playlist" });
+  }
 });
 
 // Call this before starting the server
