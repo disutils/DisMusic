@@ -130,7 +130,7 @@ If you encounter any issues or have questions:
 
 ## 🗺️ Roadmap
 
-### Current Version (1.3)
+### Current Version (1.4.0A)
 - ✅ Basic music streaming
 - ✅ Queue management
 - ✅ Inhouse playlist system! Implemented but buggy
@@ -138,15 +138,16 @@ If you encounter any issues or have questions:
 - ✅ Real-time synchronization
 - ✅ Web interface
 - ✅ Mobile support (responsive design)
+- ✅ Favorite tracks system
+- ✅ Viewing playlist page
+- ✅ Search page with search results
 
 
-### Upcoming Features / WIP (1.4A)
--  Inhouse playlist system! Implemented but buggy
-- 🔄 Favorite tracks system
+### Upcoming Features / WIP (1.4.3A)
 - 🔄 Advanced playlist features
 - 🔄 Custom themes
 - 🔄 Alerts (Notis)
-- 🔄 Viewing playlist page
+
 
 ### Future Plans (v1.0)
 - 🔮 Offline mode
