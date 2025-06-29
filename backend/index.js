@@ -586,11 +586,17 @@ app.post("/api/spotify", async (req, res) => {
             }
             const playlistRes = await spotifyApi.getPlaylist(playlistId);
             const playlist = playlistRes.body;
-            // Get up to 4 album covers from the first 4 tracks
-            const covers = (playlist.tracks.items || [])
-                .slice(0, 4)
+            // Get unique album covers from all tracks
+            const uniqueCovers = [...new Set(
+                (playlist.tracks.items || [])
                 .map(item => item.track?.album?.images?.[0]?.url || "")
-                .filter(Boolean);
+                .filter(Boolean)
+            )];
+            // Take first 4 unique covers, if not enough unique covers, repeat the last one
+            const covers = uniqueCovers.length >= 4
+                ? uniqueCovers.slice(0, 4)
+                : [...uniqueCovers, ...Array(4 - uniqueCovers.length).fill(uniqueCovers[uniqueCovers.length - 1] || "")];
+
             return res.json({
                 name: playlist.name,
                 covers,
@@ -1328,6 +1334,77 @@ app.post("/api/user/playlist/:id/add-track", async (req, res) => {
   }
 });
 
+// --- SEARCH API ENDPOINT ---
+app.get("/api/search", async (req, res) => {
+  const { query, type = "all" } = req.query;
+  if (!query) {
+    return res.status(400).json({ error: "Search query is required" });
+  }
+
+  try {
+    if (!spotifyApi.getAccessToken()) {
+      await getSpotifyToken();
+    }
+
+    let results = {};
+
+    if (type === "all") {
+      const [tracks, artists, albums, playlists] = await Promise.all([
+        spotifyApi.searchTracks(query, { limit: 20 }),
+        spotifyApi.searchArtists(query, { limit: 20 }),
+        spotifyApi.searchAlbums(query, { limit: 20 }),
+        spotifyApi.searchPlaylists(query, { limit: 20 })
+      ]);
+
+      results = {
+        tracks: tracks.body.tracks,
+        artists: artists.body.artists,
+        albums: albums.body.albums,
+        playlists: playlists.body.playlists
+      };
+    } else {
+      const searchMethod = `search${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+      if (typeof spotifyApi[searchMethod] !== 'function') {
+        return res.status(400).json({ error: "Invalid search type" });
+      }
+      const result = await spotifyApi[searchMethod](query, { limit: 20 });
+      results = result.body;
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error("Search error:", error);
+    if (error.statusCode === 401) {
+      try {
+        await getSpotifyToken();
+        // Retry the search after token refresh
+        if (type === "all") {
+          const [tracks, artists, albums, playlists] = await Promise.all([
+            spotifyApi.searchTracks(query, { limit: 20 }),
+            spotifyApi.searchArtists(query, { limit: 20 }),
+            spotifyApi.searchAlbums(query, { limit: 20 }),
+            spotifyApi.searchPlaylists(query, { limit: 20 })
+          ]);
+
+          return res.json({
+            tracks: tracks.body.tracks,
+            artists: artists.body.artists,
+            albums: albums.body.albums,
+            playlists: playlists.body.playlists
+          });
+        } else {
+          const searchMethod = `search${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+          const result = await spotifyApi[searchMethod](query, { limit: 20 });
+          return res.json(result.body);
+        }
+      } catch (retryError) {
+        return res.status(500).json({ error: "Failed to refresh token and retry search" });
+      }
+    }
+    res.status(500).json({ error: "Failed to perform search" });
+  }
+});
+
 // Call this before starting the server
 ensureDatabaseAndTable().then(pool => {
     global.pgPool = pool;
@@ -1335,3 +1412,4 @@ ensureDatabaseAndTable().then(pool => {
         console.log("Server running on http://localhost:3000");
     });
 });
+
