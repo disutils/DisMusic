@@ -8,6 +8,12 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import {
+  Slider as SliderPrimitive,
+  SliderTrack,
+  SliderRange,
+  SliderThumb,
+} from "@/components/ui/slider"
+import {
   Play,
   Pause,
   SkipForward,
@@ -119,44 +125,38 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
 
   // Handle progress bar drag events
   const handleProgressMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!duration) return
+    if (!duration || !progressBarRef.current) return;
 
-    setIsDragging(true)
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = relativeX / rect.width;
+    const newTime = percentage * duration;
 
-    const rect = progressBarRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const clickX = e.clientX - rect.left
-    const percentage = clickX / rect.width
-    const newTime = percentage * duration
-
-    setDragTime(newTime)
-  }
-
-  const handleProgressMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !duration) return
-
-    const rect = progressBarRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const moveX = e.clientX - rect.left
-    const percentage = Math.max(0, Math.min(1, moveX / rect.width))
-    const newTime = percentage * duration
-
-    setDragTime(newTime)
-  }
-
-  const handleProgressMouseUp = () => {
-    if (isDragging && dragTime !== null && typeof window !== "undefined" && window.ytPlayer) {
-      window.ytPlayer.seekTo(dragTime)
-      setCurrentTime(dragTime)
+    if (window.ytPlayer && typeof window.ytPlayer.seekTo === 'function') {
+        window.ytPlayer.seekTo(newTime, true);
+        setCurrentTime(newTime);
     }
+};
 
-    setIsDragging(false)
-    setDragTime(null)
-  }
+const handleProgressMouseMove = (e: MouseEvent) => {
+    if (!isDragging || !duration || !progressBarRef.current) return;
 
-  // Add and remove event listeners for drag
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const relativeX = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percentage = relativeX / rect.width;
+    const newTime = percentage * duration;
+
+    if (window.ytPlayer && typeof window.ytPlayer.seekTo === 'function') {
+        window.ytPlayer.seekTo(newTime, true);
+        setCurrentTime(newTime);
+    }
+};
+
+const handleProgressMouseUp = () => {
+    setIsDragging(false);
+}
+
+// Add and remove event listeners for drag
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -511,7 +511,13 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
           {/* Volume and Additional Controls */}
           <div className="flex items-center gap-3 w-1/4 justify-end">
             <Volume2 className="w-4 h-4 text-gray-400" />
-            <Slider value={volume} onValueChange={handleVolumeSliderChange} max={100} step={1} className="w-24" />
+            <Slider
+              value={[volume]}
+              onValueChange={handleVolumeSliderChange}
+              max={100}
+              step={1}
+              className="w-24"
+            />
           </div>
         </div>
 
