@@ -75,11 +75,13 @@ The application uses the following Socket.IO events:
 - `POST /api/queue` - Queue management
 - `GET /api/lyrics` - Lyrics retrieval (WIP)
 - `GET /api/stats` - User statistics (WIP)
-- `POST /auth/discord` - Discord OAuth callback
+- `GET /discord/callback` - Discord OAuth callback endpoint
 - `POST /api/user/playlist/create` - Create a new in-house playlist for the user
 - `GET /api/user/playlists` - Get user's playlists
 - `POST /api/user/playlists` - Create/update user's playlists
 - `DELETE /api/user/playlists` - Delete a user's playlist
+- `GET /api/user/playlist/:id` - Get a specific playlist by ID
+- `POST /api/user/playlist/:id/add-track` - Add a track to a specific playlist
 - `GET /api/user/info` - Get user profile information
 - `POST /api/logout` - Logout and invalidate session
 - `GET /api/user/favorites` - Get user's favorite tracks
@@ -87,6 +89,7 @@ The application uses the following Socket.IO events:
 - `POST /api/spotify` - Get Spotify track/playlist info
 - `POST /api/applemusic` - Get Apple Music track/playlist info
 - `POST /api/youtube` - Get YouTube playlist info
+- `POST /api/client-logout-log` - Log client logout events
 - `GET /test` - Backend health check endpoint
 
 ---
