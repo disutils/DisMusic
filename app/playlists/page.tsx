@@ -24,6 +24,7 @@ export default function PlaylistsPage() {
   const [newPlaylistName, setNewPlaylistName] = useState("")
   const [newPlaylistTracks, setNewPlaylistTracks] = useState("")
   const [createError, setCreateError] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
   // On mount, get session token and fetch playlists from DB
@@ -225,7 +226,9 @@ export default function PlaylistsPage() {
   }
 
   // Delete playlist handler
-  const handleDeletePlaylist = async (playlist, idx) => {
+  const handleDeletePlaylist = async (playlist, idx, e: React.MouseEvent) => {
+    e.preventDefault();  // Prevent any link navigation
+    e.stopPropagation(); // Stop event bubbling
     if (!sessionToken) return;
     // If playlist has an id, it's an in-house playlist (from user_playlists table)
     const deleteBody = playlist.id
@@ -243,9 +246,11 @@ export default function PlaylistsPage() {
       if (res.ok) {
         const data = await res.json();
         setPlaylists(data.playlists);
+        toast({ title: "Playlist deleted successfully", variant: "success" });
       }
     } catch (err) {
       console.error("[PlaylistsPage] Error deleting playlist:", err);
+      toast({ title: "Failed to delete playlist", variant: "destructive" });
     }
   };
 
@@ -289,6 +294,7 @@ export default function PlaylistsPage() {
       toast({ title: "One or more track URLs are invalid.", description: `Invalid: ${invalidTrack}`, variant: "destructive" });
       return;
     }
+    setIsCreating(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/user/playlist/create`, {
         method: "POST",
@@ -312,11 +318,15 @@ export default function PlaylistsPage() {
         setCreateError("");
         toast({ title: "Playlist created!", variant: "success" });
       } else {
-        toast({ title: "Failed to create playlist. Please try again.", variant: "destructive" });
+        const text = await res.text();
+        console.error("[PlaylistsPage] Error creating playlist, server responded with:", text);
+        toast({ title: "Failed to create playlist. Please try again.", description: text, variant: "destructive" });
       }
     } catch (err) {
       toast({ title: "Error creating playlist.", description: "Please check your input and try again.", variant: "destructive" });
       console.error("[PlaylistsPage] Error creating playlist:", err);
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -350,43 +360,63 @@ export default function PlaylistsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-            {playlists.map((pl, idx) => (
-              <div
-                key={pl.id ? `inhouse-${pl.id}-${idx}` : pl.url ? `url-${pl.url}` : `idx-${idx}`}
-                className="bg-[#232323] rounded-xl shadow-xl p-0 flex flex-col overflow-hidden border border-gray-800 hover:shadow-2xl hover:scale-[1.025] transition-all duration-200 group relative animate-fade-in"
-              >
-                <div className="aspect-square w-full grid grid-cols-2 grid-rows-2">
-                  {[0,1,2,3].map(i => (
-                    <div key={i} className="w-full h-full bg-gray-800 flex items-center justify-center overflow-hidden">
-                      {pl.covers && pl.covers[i] ? (
-                        <img src={pl.covers[i]} alt="cover" className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200" />
-                      ) : (
-                        <span className="text-gray-700 text-2xl">🎵</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div className="font-bold text-white mb-2 flex items-center justify-between gap-2">
-                    <Tooltip content={pl.name}>
-                      <span className="truncate max-w-[140px] md:max-w-[180px] lg:max-w-[220px]" title={pl.name}>{pl.name}</span>
-                    </Tooltip>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="ml-2 opacity-80 hover:opacity-100"
-                      title="Delete Playlist"
-                      onClick={() => handleDeletePlaylist(pl, idx)}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </Button>
+            {playlists.map((pl, idx) => {
+              const isInhouse = !!pl.id && Array.isArray(pl.tracks);
+              const cardContent = (
+                <div
+                  className="bg-[#232323] rounded-xl shadow-xl p-0 flex flex-col overflow-hidden border border-gray-800 hover:shadow-2xl hover:scale-[1.025] transition-all duration-200 group relative animate-fade-in cursor-pointer"
+                >
+                  <div className="aspect-square w-full grid grid-cols-2 grid-rows-2">
+                    {[0,1,2,3].map(i => (
+                      <div key={i} className="w-full h-full bg-gray-800 flex items-center justify-center overflow-hidden">
+                        {pl.covers && pl.covers[i] ? (
+                          <img src={pl.covers[i]} alt="cover" className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-200" />
+                        ) : (
+                          <span className="text-gray-700 text-2xl">🎵</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <Button onClick={() => handlePlayPlaylist(pl)} className="w-full bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 shadow-md mt-2">Play</Button>
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div className="font-bold text-white mb-2 flex items-center justify-between gap-2">
+                      <Tooltip content={pl.name}>
+                        <span className="truncate max-w-[140px] md:max-w-[180px] lg:max-w-[220px]" title={pl.name}>{pl.name}</span>
+                      </Tooltip>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="ml-2 opacity-80 hover:opacity-100"
+                        title="Delete Playlist"
+                        onClick={(e) => handleDeletePlaylist(pl, idx, e)}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </Button>
+                    </div>
+                    <Button onClick={e => { e.stopPropagation(); handlePlayPlaylist(pl); }} className="w-full bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 shadow-md mt-2">Play</Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+              return isInhouse ? (
+                <a
+                  key={pl.id ? `inhouse-${pl.id}-${idx}` : pl.url ? `url-${pl.url}` : `idx-${idx}`}
+                  href={`/playlists/${pl.id}`}
+                  className="block"
+                  tabIndex={0}
+                  aria-label={`Manage playlist ${pl.name}`}
+                >
+                  {cardContent}
+                </a>
+              ) : (
+                <div
+                  key={pl.id ? `inhouse-${pl.id}-${idx}` : pl.url ? `url-${pl.url}` : `idx-${idx}`}
+                  tabIndex={0}
+                >
+                  {cardContent}
+                </div>
+              );
+            })}
           </div>
         )}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -412,7 +442,7 @@ export default function PlaylistsPage() {
               </div>
               <DialogFooter className="mt-6">
                 <Button type="button" variant="secondary" onClick={() => setShowCreateDialog(false)}>Cancel</Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">Create</Button>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700" isLoading={isCreating}>Create</Button>
               </DialogFooter>
             </form>
           </DialogContent>
