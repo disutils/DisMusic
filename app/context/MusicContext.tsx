@@ -32,6 +32,7 @@ interface MusicContextType {
   setCurrentTime: (time: number) => void
   username?: string
   userpfpurl?: string
+  display_name?: string
   favorites: any[]
   isFavorited: (track: any) => boolean
   toggleFavorite: (track: any) => Promise<void>
@@ -54,6 +55,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState("")
   const [username, setUsername] = useState<string | undefined>(undefined)
   const [userpfpurl, setUserpfpurl] = useState<string | undefined>(undefined)
+  const [display_name, setDisplayName] = useState<string | undefined>(undefined)
   const [favorites, setFavorites] = useState<any[]>([])
   const [currentPath, setCurrentPath] = useState<string>("queue")
   const Cookies = require("js-cookie")
@@ -200,6 +202,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         console.log("[MusicContext] /api/user/info data:", data)
         if (data && data.username) setUsername(data.username)
         if (data && data.userpfpurl) setUserpfpurl(data.userpfpurl)
+        if (data && data.display_name) setDisplayName(data.display_name)
       })
       .catch((err) => { console.error("[MusicContext] Error fetching user info:", err) })
   }, [])
@@ -321,6 +324,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         setCurrentTime,
         username,
         userpfpurl,
+        display_name,
         favorites,
         isFavorited,
         toggleFavorite,
