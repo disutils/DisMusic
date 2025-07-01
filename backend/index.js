@@ -711,7 +711,7 @@ app.post("/api/youtube", async (req, res) => {
 
 
 // Helper to upsert user in DB
-async function upsertUser({ id, username, avatar, playlists = [], queue = [] }) {
+async function upsertUser({ id, username, avatar, global_name, playlists = [], queue = [] }) {
   const pool = global.pgPool;
   const userpfpurl = avatar
     ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
@@ -719,10 +719,10 @@ async function upsertUser({ id, username, avatar, playlists = [], queue = [] }) 
   // Generate a secure session token
   const sessionToken = crypto.randomBytes(32).toString("hex");
   await pool.query(
-    `INSERT INTO users (userid, username, userpfpurl, userplaylists, userqueue)
-     VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (userid) DO UPDATE SET username = $2, userpfpurl = $3`,
-    [id, username, userpfpurl, JSON.stringify(playlists), JSON.stringify(queue)]
+    `INSERT INTO users (userid, username, display_name, userpfpurl, userplaylists, userqueue)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (userid) DO UPDATE SET username = $2, display_name = $3, userpfpurl = $4`,
+    [id, username, global_name, userpfpurl, JSON.stringify(playlists), JSON.stringify(queue)]
   );
   // Save session token to a new table or upsert to users (for simplicity, add to users)
   await pool.query(
@@ -770,7 +770,7 @@ app.get("/discord/callback", async (req, res) => {
     }
 
     // Upsert user in DB and get session token
-    const sessionToken = await upsertUser(userData);
+    const sessionToken = await upsertUser({ ...userData, global_name: userData.global_name });
     // Redirect to frontend login page with token as query param
     res.redirect(`${process.env.CORS_ORIGIN || "https://dismusic.distools.dev"}/login?token=${sessionToken}`);
   } catch (err) {
@@ -811,11 +811,14 @@ async function ensureDatabaseAndTable() {
             id SERIAL PRIMARY KEY,
             userid TEXT UNIQUE,
             username TEXT,
+            display_name TEXT,
             userpfpurl TEXT,
             userplaylists JSONB,
             userqueue JSONB,
             sessiontoken TEXT
         )`);
+        // Ensure display_name column exists (for legacy tables)
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT`);
         // User playlists table (new)
         await pool.query(`CREATE TABLE IF NOT EXISTS user_playlists (
             id SERIAL PRIMARY KEY,
@@ -1102,7 +1105,8 @@ app.get("/api/user/info", async (req, res) => {
     res.json({
       username: user.username || null,
       userpfpurl: user.userpfpurl || null,
-      userid: user.userid || null
+      userid: user.userid || null,
+      display_name: user.display_name || null
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch user info" });
