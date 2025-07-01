@@ -87,6 +87,7 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
     handleVolumeChange,
     setCurrentTime,
     username,
+    display_name,
     userpfpurl,
   } = useMusic()
 
@@ -375,7 +376,7 @@ const handleProgressMouseUp = () => {
               {userpfpurl ? (
                   <img
                       src={userpfpurl}
-                      alt={username || "User"}
+                      alt={display_name || "User"}
                       className="w-8 h-8 rounded-full object-cover bg-gray-600"
                       onError={e => { e.currentTarget.src = "/placeholder-user.jpg"; }}
                   />
@@ -384,7 +385,7 @@ const handleProgressMouseUp = () => {
                     <User className="w-4 h-4" />
                   </div>
               )}
-              <span className="text-sm text-gray-300 truncate max-w-[100px]">{username || "User"}</span>
+              <span className="text-sm text-gray-300 truncate max-w-[100px]">{display_name || "User"}</span>
               <div className="relative ml-auto">
                 <Button variant="ghost" size="sm" onClick={() => setShowDropdown(v => !v)}>
                   <Settings className="w-4 h-4" />
