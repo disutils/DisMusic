@@ -38,16 +38,16 @@ export default function FavoritesPage() {
   const playAllFavorites = () => {
     if (favorites.length > 0 && socket) {
       const firstTrack = favorites[0];
-      // For the first track, we directly play it
       socket.emit("play", {
         query: firstTrack.youtubeUrl || `${firstTrack.name} ${firstTrack.artist}`
       });
-
-      // Then add remaining tracks to queue
-      favorites.slice(1).forEach(track => {
-        socket.emit("addToQueue", {
-          query: track.youtubeUrl || `${track.name} ${track.artist}`
-        });
+      // Add remaining tracks to queue with a delay between each emit
+      favorites.slice(1).forEach((track, idx) => {
+        setTimeout(() => {
+          socket.emit("addToQueue", {
+            query: track.youtubeUrl || `${track.name} ${track.artist}`
+          });
+        }, 150 * idx);
       });
     }
   }
@@ -55,20 +55,18 @@ export default function FavoritesPage() {
   // Play shuffled favorites
   const shuffleFavorites = () => {
     if (favorites.length > 0 && socket) {
-      const shuffledFavorites = [...favorites]
-        .sort(() => Math.random() - 0.5);
-
+      const shuffledFavorites = [...favorites].sort(() => Math.random() - 0.5);
       const firstTrack = shuffledFavorites[0];
-      // For the first track, we directly play it
       socket.emit("play", {
         query: firstTrack.youtubeUrl || `${firstTrack.name} ${firstTrack.artist}`
       });
-
-      // Then add remaining shuffled tracks to queue
-      shuffledFavorites.slice(1).forEach(track => {
-        socket.emit("addToQueue", {
-          query: track.youtubeUrl || `${track.name} ${track.artist}`
-        });
+      // Add remaining shuffled tracks to queue with a delay between each emit
+      shuffledFavorites.slice(1).forEach((track, idx) => {
+        setTimeout(() => {
+          socket.emit("addToQueue", {
+            query: track.youtubeUrl || `${track.name} ${track.artist}`
+          });
+        }, 150 * idx);
       });
     }
   }
