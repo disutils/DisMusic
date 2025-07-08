@@ -400,12 +400,21 @@ const handleProgressMouseUp = () => {
                           </Badge>
                         </div>
                       </div>
-                      <button
+                      {token ? (
+                        <button
                           className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-gray-800"
                           onClick={handleLogout}
-                      >
-                        Log out
-                      </button>
+                        >
+                          Log out
+                        </button>
+                      ) : (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-green-500 hover:bg-gray-800"
+                          onClick={() => router.push('/login')}
+                        >
+                          Log in
+                        </button>
+                      )}
                     </div>
                 )}
               </div>
@@ -444,9 +453,6 @@ const handleProgressMouseUp = () => {
               <p className="text-sm font-medium text-white truncate">{currentTrack}</p>
               <p className="text-xs text-gray-400 truncate">{currentTrackInfo?.artist || "Unknown Artist"}</p>
             </div>
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
-              <Heart className="w-4 h-4" />
-            </Button>
           </div>
 
           {/* Player Controls */}
