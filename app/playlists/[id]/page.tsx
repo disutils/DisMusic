@@ -64,6 +64,9 @@ export default function PlaylistPage() {
             Authorization: sessionToken ? `Bearer ${sessionToken}` : ""
           }
         })
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("Hey! You don't have access to this playlist.");
+        }
         if (!res.ok) throw new Error("Failed to fetch playlist")
         const data = await res.json()
         setPlaylist(data)
