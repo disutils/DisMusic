@@ -121,7 +121,7 @@ export default function ClientLayoutContent({ children }: { children: React.Reac
   const libraryItems = [
     { path: "/playlists", icon: Library, label: "Playlists" },
     { path: "/artists", icon: User, label: "Artists" },
-    { path: "/albums", icon: Disc3, label: "Albums" },
+    // { path: "/albums", icon: Disc3, label: "Albums" },
   ]
 
   // Handle progress bar drag events
