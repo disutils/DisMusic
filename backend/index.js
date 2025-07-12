@@ -1076,14 +1076,25 @@ app.get("/api/user/playlist/:id", async (req, res) => {
         const user = await getUserBySessionToken(sessionToken);
         if (!user) return res.status(401).json({ error: "Invalid session token" });
         const pool = global.pgPool;
-        const result = await pool.query(
-            'SELECT id, name, tracks, created_at FROM user_playlists WHERE id = $1 AND userid = $2',
-            [playlistId, user.userid]
+        // First, check if playlist exists at all
+        const existsRes = await pool.query(
+            'SELECT id, userid, name, tracks, created_at FROM user_playlists WHERE id = $1',
+            [playlistId]
         );
-        if (result.rows.length === 0) {
+        if (existsRes.rows.length === 0) {
             return res.status(404).json({ error: "Playlist not found" });
         }
-        res.json(result.rows[0]);
+        const playlist = existsRes.rows[0];
+        if (playlist.userid !== user.userid) {
+            return res.status(403).json({ error: "You do not have access to this playlist" });
+        }
+        // Only return if user owns it
+        res.json({
+            id: playlist.id,
+            name: playlist.name,
+            tracks: playlist.tracks,
+            created_at: playlist.created_at
+        });
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch playlist" });
     }
@@ -1409,6 +1420,681 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
+// // --- RECOMMENDATIONS API: Suggest tracks based on user favorites and playlists ---
+// app.get("/api/user/recommendations", async (req, res) => {
+//     console.log("[RECOMMENDATIONS] endpoint hit");
+//     const auth = req.headers["authorization"];
+//     if (!auth || !auth.startsWith("Bearer ")) {
+//         return res.status(401).json({ error: "Missing or invalid Authorization header" });
+//     }
+//     const sessionToken = auth.replace("Bearer ", "");
+//     try {
+//         const user = await getUserBySessionToken(sessionToken);
+//         if (!user) {
+//             console.log("[RECOMMENDATIONS] Invalid session token");
+//             return res.status(401).json({ error: "Invalid session token" });
+//         }
+//         const pool = global.pgPool;
+//         // Get favorites
+//         const favoritesRes = await pool.query(
+//             'SELECT tracks FROM user_favorites WHERE userid = $1',
+//             [user.userid]
+//         );
+//         const favorites = (favoritesRes.rows[0]?.tracks || []);
+//         // Get playlists
+//         const playlistsRes = await pool.query(
+//             'SELECT tracks FROM user_playlists WHERE userid = $1',
+//             [user.userid]
+//         );
+//         let playlistTracks = [];
+//         for (const row of playlistsRes.rows) {
+//             if (Array.isArray(row.tracks)) playlistTracks.push(...row.tracks);
+//         }
+//         console.log('[RECOMMENDATIONS] favorites:', JSON.stringify(favorites, null, 2));
+//         console.log('[RECOMMENDATIONS] playlistTracks:', JSON.stringify(playlistTracks, null, 2));
+//         // Collect unique Spotify track IDs and artist IDs from favorites and playlists
+//         const seedTrackIds = [];
+//         const seedArtistIds = [];
+//         const seedGenres = new Set(); // Add support for seed genres
+//         const seenTracks = new Set();
+//         const seenArtists = new Set();
+//
+//         console.log('[RECOMMENDATIONS] Processing tracks for seeds');
+//
+//         for (const t of [...favorites, ...playlistTracks]) {
+//             try {
+//                 // Make sure we only use Spotify IDs (not YouTube or other sources)
+//                 if (t.id && t.type === 'track' && !seenTracks.has(t.id)) {
+//                     console.log('[RECOMMENDATIONS] Adding track seed:', t.id);
+//                     seedTrackIds.push(t.id);
+//                     seenTracks.add(t.id);
+//
+//                     // Add genres from track if available
+//                     if (t.genres && Array.isArray(t.genres)) {
+//                         t.genres.forEach(genre => seedGenres.add(genre));
+//                     }
+//                 }
+//
+//                 if (t.artists && Array.isArray(t.artists)) {
+//                     for (const a of t.artists) {
+//                         // Ensure artist has a valid Spotify ID
+//                         if (a.id && !seenArtists.has(a.id)) {
+//                             console.log('[RECOMMENDATIONS] Adding artist seed:', a.id);
+//                             seedArtistIds.push(a.id);
+//                             seenArtists.add(a.id);
+//                         }
+//                     }
+//                 }
+//             } catch (err) {
+//                 console.error('[RECOMMENDATIONS] Error processing track:', err);
+//                 // Continue with next track
+//             }
+//         }
+//
+//         // Limit to 5 seeds total (Spotify API limit)
+//         // Prioritize tracks, then artists, then genres
+//         const seeds = {};
+//         const MAX_TOTAL_SEEDS = 5;
+//         let remainingSeeds = MAX_TOTAL_SEEDS;
+//
+//         // Add track seeds (up to 3)
+//         if (seedTrackIds.length > 0) {
+//             const trackSeedsToUse = seedTrackIds.slice(0, Math.min(3, remainingSeeds));
+//             seeds.seed_tracks = trackSeedsToUse;
+//             remainingSeeds -= trackSeedsToUse.length;
+//             console.log('[RECOMMENDATIONS] Final track seeds:', seeds.seed_tracks);
+//         }
+//
+//         // Add artist seeds with remaining slots (up to 2)
+//         if (seedArtistIds.length > 0 && remainingSeeds > 0) {
+//             const artistSeedsToUse = seedArtistIds.slice(0, remainingSeeds);
+//             seeds.seed_artists = artistSeedsToUse;
+//             remainingSeeds -= artistSeedsToUse.length;
+//             console.log('[RECOMMENDATIONS] Final artist seeds:', seeds.seed_artists);
+//         }
+//
+//         // Add genre seeds with any remaining slots
+//         if (seedGenres.size > 0 && remainingSeeds > 0) {
+//             const genreSeedsToUse = Array.from(seedGenres).slice(0, remainingSeeds);
+//             seeds.seed_genres = genreSeedsToUse;
+//             console.log('[RECOMMENDATIONS] Final genre seeds:', seeds.seed_genres);
+//         }
+//
+//         if (!spotifyApi.getAccessToken()) {
+//             console.log('[RECOMMENDATIONS] No Spotify token, getting one');
+//             await getSpotifyToken();
+//         }
+//
+//         // If no seeds, return empty
+//         if ((!seeds.seed_tracks || !seeds.seed_tracks.length) &&
+//             (!seeds.seed_artists || !seeds.seed_artists.length) &&
+//             (!seeds.seed_genres || !seeds.seed_genres.length)) {
+//             console.log('[RECOMMENDATIONS] No valid seeds found, returning empty array');
+//             return res.json({ recommendations: [] });
+//         }
+//
+//         try {
+//             // Get recommendations from Spotify
+//             console.log('[RECOMMENDATIONS] Calling Spotify API with seeds:', JSON.stringify(seeds));
+//
+//             // Validate seeds - Spotify requires at least one seed parameter
+//             if ((!seeds.seed_tracks || seeds.seed_tracks.length === 0) &&
+//                 (!seeds.seed_artists || seeds.seed_artists.length === 0) &&
+//                 (!seeds.seed_genres || seeds.seed_genres.length === 0)) {
+//                 console.log('[RECOMMENDATIONS] No valid seeds available');
+//                 return res.json({ recommendations: [] });
+//             }
+//
+//             // Add additional parameters to improve recommendation quality
+//             const recommendationParams = {
+//                 limit: 12,
+//                 market: 'US',
+//             };
+//
+//             // Add seed parameters only if they exist and have items
+//             if (seeds.seed_tracks && seeds.seed_tracks.length > 0) {
+//                 recommendationParams.seed_tracks = seeds.seed_tracks.join(',');
+//             }
+//
+//             if (seeds.seed_artists && seeds.seed_artists.length > 0) {
+//                 recommendationParams.seed_artists = seeds.seed_artists.join(',');
+//             }
+//
+//             if (seeds.seed_genres && seeds.seed_genres.length > 0) {
+//                 recommendationParams.seed_genres = seeds.seed_genres.join(',');
+//             }
+//
+//             console.log('[RECOMMENDATIONS] Final parameters:', recommendationParams);
+//
+//             // Use direct fetch with proper URL construction instead of the library's getRecommendations
+//             const accessToken = spotifyApi.getAccessToken();
+//             const url = new URL('https://api.spotify.com/v1/recommendations');
+//
+//             // Add all parameters to URL
+//             Object.keys(recommendationParams).forEach(key => {
+//                 url.searchParams.append(key, recommendationParams[key]);
+//             });
+//
+//             console.log('[RECOMMENDATIONS] Fetching from URL:', url.toString());
+//
+//             const response = await fetch(url.toString(), {
+//                 method: 'GET',
+//                 headers: {
+//                     'Authorization': `Bearer ${accessToken}`,
+//                     'Content-Type': 'application/json'
+//                 }
+//             });
+//
+//             if (!response.ok) {
+//                 const errorData = await response.json().catch(() => ({}));
+//                 console.error('[RECOMMENDATIONS] API Error:', response.status, errorData);
+//                 throw new Error(`Spotify API error: ${response.status}`);
+//             }
+//
+//             const data = await response.json();
+//             console.log(`[RECOMMENDATIONS] Success! Found ${data.tracks?.length || 0} recommendations`);
+//
+//             const recommendations = (data.tracks || []).map(track => ({
+//                 id: track.id,
+//                 name: track.name,
+//                 artists: track.artists.map(a => ({ name: a.name })),
+//                 albumCover: track.album?.images?.[0]?.url || "",
+//                 spotifyUrl: track.external_urls?.spotify || ""
+//             }));
+//
+//             res.json({ recommendations });
+//         } catch (err) {
+//             console.error("[RECOMMENDATIONS ERROR]", err);
+//
+//             // Try different seed combinations if the first request fails
+//             try {
+//                 console.log('[RECOMMENDATIONS] Initial request failed. Trying alternative seed combinations...');
+//                 const accessToken = spotifyApi.getAccessToken();
+//
+//                 // Create simpler URL with just one seed
+//                 const url = new URL('https://api.spotify.com/v1/recommendations');
+//                 url.searchParams.append('limit', '12');
+//                 url.searchParams.append('market', 'US');
+//
+//                 // First try: Just use one track seed if available
+//                 if (seeds.seed_tracks && seeds.seed_tracks.length > 0) {
+//                     console.log('[RECOMMENDATIONS] Trying with single track seed');
+//                     url.searchParams.append('seed_tracks', seeds.seed_tracks[0]);
+//                 }
+//                 // Second try: Just use one artist seed if available
+//                 else if (seeds.seed_artists && seeds.seed_artists.length > 0) {
+//                     console.log('[RECOMMENDATIONS] Trying with single artist seed');
+//                     url.searchParams.append('seed_artists', seeds.seed_artists[0]);
+//                 }
+//                 // Third try: Just use one genre if available
+//                 else if (seeds.seed_genres && seeds.seed_genres.length > 0) {
+//                     console.log('[RECOMMENDATIONS] Trying with single genre seed');
+//                     url.searchParams.append('seed_genres', seeds.seed_genres[0]);
+//                 } else {
+//                     // If no seeds at all, try with a popular genre
+//                     console.log('[RECOMMENDATIONS] No seeds available, using "pop" genre');
+//                     url.searchParams.append('seed_genres', 'pop');
+//                 }
+//
+//                 console.log('[RECOMMENDATIONS] Retry URL:', url.toString());
+//
+//                 const response = await fetch(url.toString(), {
+//                     method: 'GET',
+//                     headers: {
+//                         'Authorization': `Bearer ${accessToken}`,
+//                         'Content-Type': 'application/json'
+//                     }
+//                 });
+//
+//                 if (!response.ok) {
+//                     const errorData = await response.json().catch(() => ({}));
+//                     console.error('[RECOMMENDATIONS] Retry API Error:', response.status, errorData);
+//                     throw new Error(`Spotify API error: ${response.status}`);
+//                 }
+//
+//                 const data = await response.json();
+//
+//                 const recommendations = (data.tracks || []).map(track => ({
+//                     id: track.id,
+//                     name: track.name,
+//                     artists: track.artists.map(a => ({ name: a.name })),
+//                     albumCover: track.album?.images?.[0]?.url || "",
+//                     spotifyUrl: track.external_urls?.spotify || ""
+//                 }));
+//                 console.log(`[RECOMMENDATIONS] Retry success! Found ${recommendations.length} recommendations`);
+//                 return res.json({ recommendations });
+//             } catch (retryErr) {
+//                 console.error("[RECOMMENDATIONS RETRY ERROR]", retryErr);
+//
+//                 // As a last resort, try to get new releases instead of recommendations
+//                 try {
+//                     console.log('[RECOMMENDATIONS] All recommendation attempts failed. Falling back to new releases');
+//
+//                     const response = await fetch('https://api.spotify.com/v1/browse/new-releases?limit=12&country=US', {
+//                         method: 'GET',
+//                         headers: {
+//                             'Authorization': `Bearer ${spotifyApi.getAccessToken()}`,
+//                             'Content-Type': 'application/json'
+//                         }
+//                     });
+//
+//                     if (!response.ok) {
+//                         throw new Error(`Spotify API error: ${response.status}`);
+//                     }
+//
+//                     const data = await response.json();
+//
+//                     const recommendations = (data.albums?.items || []).map(album => ({
+//                         id: album.id,
+//                         name: album.name,
+//                         artists: album.artists.map(a => ({ name: a.name })),
+//                         albumCover: album.images?.[0]?.url || "",
+//                         spotifyUrl: album.external_urls?.spotify || ""
+//                     }));
+//
+//                     console.log(`[RECOMMENDATIONS] Fallback success! Returning ${recommendations.length} new releases`);
+//                     return res.json({ recommendations });
+//                 } catch (fallbackErr) {
+//                     console.error("[RECOMMENDATIONS FALLBACK ERROR]", fallbackErr);
+//                     return res.json({ recommendations: [] }); // Return empty array as last resort
+//                 }
+//             }
+//         } // end main try
+//     } catch (err) {
+//         console.error("[RECOMMENDATIONS MAIN ERROR]", err);
+//         res.status(500).json({ error: "Failed to get recommendations" });
+//     }
+// });
+
+
+// Simplified recommendations API with extensive debugging and album covers
+app.get("/api/user/recommendations", async (req, res) => {
+    console.log("[RECOMMENDATIONS] Starting recommendations endpoint");
+
+    const auth = req.headers["authorization"];
+    if (!auth || !auth.startsWith("Bearer ")) {
+        console.log("[RECOMMENDATIONS] Missing or invalid auth header");
+        return res.status(401).json({ error: "Missing or invalid Authorization header" });
+    }
+
+    const sessionToken = auth.replace("Bearer ", "");
+    console.log("[RECOMMENDATIONS] Session token received:", sessionToken.substring(0, 10) + "...");
+
+    try {
+        console.log("[RECOMMENDATIONS] Getting user by session token...");
+        const user = await getUserBySessionToken(sessionToken);
+        if (!user) {
+            console.log("[RECOMMENDATIONS] User not found for session token");
+            return res.status(401).json({ error: "Invalid session token" });
+        }
+
+        console.log("[RECOMMENDATIONS] User found:", user.userid);
+
+        // Check if we have a database connection
+        if (!global.pgPool) {
+            console.log("[RECOMMENDATIONS] No database connection!");
+            return res.status(500).json({ error: "Database connection error" });
+        }
+
+        console.log("[RECOMMENDATIONS] Database connection exists");
+
+        // Get user's favorites
+        console.log("[RECOMMENDATIONS] Querying user favorites...");
+        const favoritesRes = await global.pgPool.query(
+            'SELECT tracks FROM user_favorites WHERE userid = $1',
+            [user.userid]
+        );
+
+        console.log("[RECOMMENDATIONS] Favorites query result:", favoritesRes.rows);
+        const favorites = favoritesRes.rows[0]?.tracks || [];
+        console.log("[RECOMMENDATIONS] Found", favorites.length, "favorites");
+
+        // Get user's playlists
+        console.log("[RECOMMENDATIONS] Querying user playlists...");
+        const playlistsRes = await global.pgPool.query(
+            'SELECT tracks FROM user_playlists WHERE userid = $1',
+            [user.userid]
+        );
+
+        console.log("[RECOMMENDATIONS] Playlists query result:", playlistsRes.rows);
+        let playlistTracks = [];
+        for (const row of playlistsRes.rows) {
+            if (Array.isArray(row.tracks)) {
+                playlistTracks.push(...row.tracks);
+            }
+        }
+        console.log("[RECOMMENDATIONS] Found", playlistTracks.length, "playlist tracks");
+
+        // If no favorites or playlists, return some fallback recommendations
+        if (favorites.length === 0 && playlistTracks.length === 0) {
+            console.log("[RECOMMENDATIONS] No user music data found, returning fallback recommendations");
+
+            // Return some popular tracks as fallback
+            const fallbackRecommendations = [
+                {
+                    id: "fallback1",
+                    name: "Popular Song 1",
+                    artists: [{ name: "Popular Artist 1" }],
+                    albumCover: "",
+                    spotifyUrl: "#"
+                },
+                {
+                    id: "fallback2",
+                    name: "Popular Song 2",
+                    artists: [{ name: "Popular Artist 2" }],
+                    albumCover: "",
+                    spotifyUrl: "#"
+                },
+                {
+                    id: "fallback3",
+                    name: "Popular Song 3",
+                    artists: [{ name: "Popular Artist 3" }],
+                    albumCover: "",
+                    spotifyUrl: "#"
+                }
+            ];
+
+            console.log("[RECOMMENDATIONS] Returning fallback recommendations:", fallbackRecommendations);
+            return res.json({ recommendations: fallbackRecommendations });
+        }
+
+        // Try to get actual recommendations
+        console.log("[RECOMMENDATIONS] Attempting to get real recommendations...");
+
+        const LASTFM_API_KEY = process.env.LASTFM_API_KEY;
+        console.log("[RECOMMENDATIONS] Last.fm API key exists:", !!LASTFM_API_KEY);
+
+        if (!LASTFM_API_KEY) {
+            console.log("[RECOMMENDATIONS] No Last.fm API key, using genre-based approach");
+            return await getGenreBasedRecommendations(res);
+        }
+
+        // Ensure Spotify token is available for album cover lookup
+        if (!spotifyApi.getAccessToken()) {
+            console.log("[RECOMMENDATIONS] Getting Spotify token for album covers...");
+            try {
+                await getSpotifyToken();
+            } catch (err) {
+                console.log("[RECOMMENDATIONS] Failed to get Spotify token:", err);
+            }
+        }
+
+        // Process favorites for Last.fm recommendations
+        const recommendations = [];
+        const allTracks = [...favorites, ...playlistTracks];
+        console.log("[RECOMMENDATIONS] Processing", allTracks.length, "total tracks");
+
+        // DEBUG: Log the actual structure of the first few tracks
+        console.log("[RECOMMENDATIONS] === TRACK STRUCTURE DEBUG ===");
+        for (let i = 0; i < Math.min(3, allTracks.length); i++) {
+            const track = allTracks[i];
+            console.log(`[RECOMMENDATIONS] Track ${i + 1} full object:`, JSON.stringify(track, null, 2));
+            console.log(`[RECOMMENDATIONS] Track ${i + 1} name:`, track.name);
+            console.log(`[RECOMMENDATIONS] Track ${i + 1} artists array:`, track.artists);
+            console.log(`[RECOMMENDATIONS] Track ${i + 1} first artist:`, track.artists?.[0]);
+            console.log(`[RECOMMENDATIONS] Track ${i + 1} artist name:`, track.artists?.[0]?.name);
+            console.log("[RECOMMENDATIONS] ---");
+        }
+        console.log("[RECOMMENDATIONS] === END DEBUG ===");
+
+        // Process tracks for recommendations
+        for (let i = 0; i < Math.min(3, allTracks.length); i++) {
+            const track = allTracks[i];
+
+            // Try different possible ways the artist might be stored
+            let artist = null;
+            let trackName = track.name;
+
+            // Method 1: track.artists[0].name (current approach)
+            if (track.artists?.[0]?.name) {
+                artist = track.artists[0].name;
+            }
+            // Method 2: track.artist (single artist property)
+            else if (track.artist) {
+                artist = track.artist;
+            }
+            // Method 3: track.artists as string array
+            else if (Array.isArray(track.artists) && track.artists[0]) {
+                artist = track.artists[0];
+            }
+            // Method 4: track.artist_name
+            else if (track.artist_name) {
+                artist = track.artist_name;
+            }
+            // Method 5: nested in track.track
+            else if (track.track?.artists?.[0]?.name) {
+                artist = track.track.artists[0].name;
+                trackName = track.track.name || trackName;
+            }
+
+            console.log(`[RECOMMENDATIONS] Processing track ${i + 1}:`, artist, "-", trackName);
+
+            if (artist && trackName) {
+                try {
+                    const lastfmUrl = `https://ws.audioscrobbler.com/2.0/?method=track.getsimilar&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(trackName)}&api_key=${LASTFM_API_KEY}&format=json&limit=4`;
+
+                    console.log("[RECOMMENDATIONS] Calling Last.fm API for:", artist, "-", trackName);
+                    const response = await fetch(lastfmUrl);
+                    console.log("[RECOMMENDATIONS] Last.fm response status:", response.status);
+
+                    if (!response.ok) {
+                        console.log("[RECOMMENDATIONS] Last.fm API error:", response.status, response.statusText);
+                        continue;
+                    }
+
+                    const data = await response.json();
+                    console.log("[RECOMMENDATIONS] Last.fm response for", artist, "-", trackName, ":", JSON.stringify(data, null, 2));
+
+                    if (data.error) {
+                        console.log("[RECOMMENDATIONS] Last.fm API error:", data.error, data.message);
+                        continue;
+                    }
+
+                    if (data.similartracks?.track) {
+                        const similarTracks = Array.isArray(data.similartracks.track)
+                            ? data.similartracks.track
+                            : [data.similartracks.track];
+
+                        console.log("[RECOMMENDATIONS] Found", similarTracks.length, "similar tracks for", artist, "-", trackName);
+
+                        for (const similar of similarTracks) {
+                            if (similar.artist?.name && similar.name) {
+                                console.log("[RECOMMENDATIONS] Adding similar track:", similar.artist.name, "-", similar.name);
+
+                                // Get album cover - try Last.fm first, then Spotify
+                                let albumCover = "";
+
+                                // Method 1: Last.fm album cover (different sizes available)
+                                if (similar.image && Array.isArray(similar.image)) {
+                                    // Try different sizes: extralarge, large, medium, small
+                                    const extraLarge = similar.image.find(img => img.size === "extralarge");
+                                    const large = similar.image.find(img => img.size === "large");
+                                    const medium = similar.image.find(img => img.size === "medium");
+
+                                    albumCover = extraLarge?.["#text"] || large?.["#text"] || medium?.["#text"] || similar.image[2]?.["#text"] || "";
+                                }
+
+                                // Method 2: If no Last.fm cover, try Spotify
+                                if (!albumCover && spotifyApi.getAccessToken()) {
+                                    try {
+                                        console.log("[RECOMMENDATIONS] Searching Spotify for album cover:", similar.artist.name, "-", similar.name);
+                                        const spotifySearchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(`track:${similar.name} artist:${similar.artist.name}`)}&type=track&limit=1`;
+
+                                        const spotifyResponse = await fetch(spotifySearchUrl, {
+                                            headers: {
+                                                'Authorization': `Bearer ${spotifyApi.getAccessToken()}`
+                                            }
+                                        });
+
+                                        if (spotifyResponse.ok) {
+                                            const spotifyData = await spotifyResponse.json();
+                                            if (spotifyData.tracks?.items?.length > 0) {
+                                                const spotifyTrack = spotifyData.tracks.items[0];
+                                                albumCover = spotifyTrack.album?.images?.[0]?.url || spotifyTrack.album?.images?.[1]?.url || "";
+                                                console.log("[RECOMMENDATIONS] Found Spotify album cover:", albumCover);
+                                            }
+                                        }
+                                    } catch (spotifyErr) {
+                                        console.log("[RECOMMENDATIONS] Spotify album cover lookup failed:", spotifyErr);
+                                    }
+                                }
+
+                                recommendations.push({
+                                    id: `similar_${Date.now()}_${Math.random()}`,
+                                    name: similar.name,
+                                    artists: [{ name: similar.artist.name }],
+                                    albumCover: albumCover,
+                                    spotifyUrl: similar.url || "#"
+                                });
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error(`[RECOMMENDATIONS] Error processing track ${artist} - ${trackName}:`, err);
+                }
+            } else {
+                console.log(`[RECOMMENDATIONS] Skipping track ${i + 1} - missing artist or track name`);
+            }
+        }
+
+        console.log("[RECOMMENDATIONS] Final recommendations count:", recommendations.length);
+
+        // Remove duplicates and limit
+        const uniqueRecommendations = recommendations
+            .filter((track, index, self) =>
+                index === self.findIndex(t => t.name === track.name && t.artists[0]?.name === track.artists[0]?.name)
+            )
+            .slice(0, 12);
+
+        console.log("[RECOMMENDATIONS] Unique recommendations count:", uniqueRecommendations.length);
+        console.log("[RECOMMENDATIONS] Sending response:", uniqueRecommendations);
+
+        res.json({ recommendations: uniqueRecommendations });
+
+    } catch (err) {
+        console.error("[RECOMMENDATIONS] Main error:", err);
+        console.error("[RECOMMENDATIONS] Error stack:", err.stack);
+
+        // Return fallback recommendations even on error
+        const fallbackRecommendations = [
+            {
+                id: "error_fallback1",
+                name: "Error Fallback Song 1",
+                artists: [{ name: "Fallback Artist 1" }],
+                albumCover: "",
+                spotifyUrl: "#"
+            },
+            {
+                id: "error_fallback2",
+                name: "Error Fallback Song 2",
+                artists: [{ name: "Fallback Artist 2" }],
+                albumCover: "",
+                spotifyUrl: "#"
+            }
+        ];
+
+        console.log("[RECOMMENDATIONS] Returning error fallback");
+        res.json({ recommendations: fallbackRecommendations });
+    }
+});
+
+// Fallback function for genre-based recommendations
+async function getGenreBasedRecommendations(res) {
+    console.log("[RECOMMENDATIONS] Getting genre-based recommendations");
+
+    try {
+        // Check if Spotify token exists
+        if (!spotifyApi.getAccessToken()) {
+            console.log("[RECOMMENDATIONS] Getting Spotify token...");
+            await getSpotifyToken();
+        }
+
+        console.log("[RECOMMENDATIONS] Spotify token exists:", !!spotifyApi.getAccessToken());
+
+        // Get featured playlists as recommendations
+        const response = await fetch('https://api.spotify.com/v1/browse/featured-playlists?limit=12&country=US', {
+            headers: {
+                'Authorization': `Bearer ${spotifyApi.getAccessToken()}`
+            }
+        });
+
+        console.log("[RECOMMENDATIONS] Spotify featured playlists response:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`Spotify API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("[RECOMMENDATIONS] Spotify data:", JSON.stringify(data, null, 2));
+
+        const recommendations = (data.playlists?.items || []).map(playlist => ({
+            id: playlist.id,
+            name: playlist.name,
+            artists: [{ name: playlist.owner?.display_name || "Spotify" }],
+            albumCover: playlist.images?.[0]?.url || "",
+            spotifyUrl: playlist.external_urls?.spotify || "#"
+        }));
+
+        console.log("[RECOMMENDATIONS] Genre-based recommendations:", recommendations);
+        return res.json({ recommendations });
+
+    } catch (err) {
+        console.error("[RECOMMENDATIONS] Genre-based error:", err);
+
+        // Final fallback
+        const fallbackRecommendations = [
+            {
+                id: "final_fallback1",
+                name: "Today's Top Hits",
+                artists: [{ name: "Spotify" }],
+                albumCover: "",
+                spotifyUrl: "#"
+            },
+            {
+                id: "final_fallback2",
+                name: "Pop Rising",
+                artists: [{ name: "Spotify" }],
+                albumCover: "",
+                spotifyUrl: "#"
+            }
+        ];
+
+        console.log("[RECOMMENDATIONS] Final fallback recommendations");
+        return res.json({ recommendations: fallbackRecommendations });
+    }
+}
+
+// Helper function to get album cover from Spotify
+async function getSpotifyAlbumCover(artist, trackName) {
+    if (!spotifyApi.getAccessToken()) {
+        return null;
+    }
+
+    try {
+        const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(`track:${trackName} artist:${artist}`)}&type=track&limit=1`;
+
+        const response = await fetch(searchUrl, {
+            headers: {
+                'Authorization': `Bearer ${spotifyApi.getAccessToken()}`
+            }
+        });
+
+        if (!response.ok) {
+            return null;
+        }
+
+        const data = await response.json();
+        if (data.tracks?.items?.length > 0) {
+            const track = data.tracks.items[0];
+            return track.album?.images?.[0]?.url || track.album?.images?.[1]?.url || null;
+        }
+
+        return null;
+    } catch (err) {
+        console.error("[RECOMMENDATIONS] Spotify album cover error:", err);
+        return null;
+    }
+}
 // Call this before starting the server
 ensureDatabaseAndTable().then(pool => {
     global.pgPool = pool;
